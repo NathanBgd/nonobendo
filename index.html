@@ -27,15 +27,16 @@
   body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
 
   /* ─── HEADER ─── */
-  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; }
-  .header h1 { font-size: 18px; font-weight: 700; color: var(--text); flex: 1; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; }
+  .header h1 { font-size: 17px; font-weight: 700; color: var(--text); flex: 1 1 220px; min-width: 0; line-height: 1.3; }
   .header h1 span { color: var(--accent); }
+  .header-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
   /* ─── STATS ─── */
-  .stats { display: flex; gap: 8px; flex-wrap: wrap; padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
-  .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 90px; }
-  .stat .num { font-size: 22px; font-weight: 700; line-height: 1; }
-  .stat .lbl { font-size: 11px; color: var(--text2); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stats { display: flex; gap: 8px; flex-wrap: nowrap; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; text-align: center; min-width: 88px; flex: 0 0 auto; }
+  .stat .num { font-size: 20px; font-weight: 700; line-height: 1; }
+  .stat .lbl { font-size: 10px; color: var(--text2); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
   .stat.s-total .num { color: var(--text); }
   .stat.s-postule .num { color: var(--accent); }
   .stat.s-attente .num { color: var(--yellow); }
@@ -44,16 +45,16 @@
   .stat.s-refuse .num { color: var(--red); }
 
   /* ─── FILTERS ─── */
-  .filters { padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .filters input[type=text] { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 12px; font-size: 13px; width: 220px; outline: none; }
+  .filters { padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filters input[type=text] { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 12px; font-size: 13px; width: 220px; max-width: 100%; outline: none; }
   .filters input[type=text]:focus { border-color: var(--accent); }
-  .filters select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 10px; font-size: 13px; outline: none; cursor: pointer; }
+  .filters select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 10px; font-size: 13px; outline: none; cursor: pointer; max-width: 100%; }
   .filters select:focus { border-color: var(--accent); }
   .btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 14px; font-size: 13px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   .btn.primary:hover { opacity: 0.85; color: #fff; }
-  .filters-info { color: var(--text3); font-size: 12px; margin-left: auto; }
+  .filters-info { color: var(--text3); font-size: 12px; margin-left: auto; flex: 1 1 auto; text-align: right; min-width: 120px; }
 
   /* ─── TABLE ─── */
   .table-wrap { padding: 16px 24px; overflow-x: auto; }
@@ -73,6 +74,10 @@
   td.td-zone { white-space: nowrap; }
   td.td-type { color: var(--text2); font-size: 12px; max-width: 180px; }
   td.td-tel { white-space: nowrap; font-size: 12px; color: var(--text2); }
+  td.td-email { min-width: 180px; max-width: 240px; }
+  .email-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--accent); border-radius: 5px; padding: 5px 8px; font-size: 11px; outline: none; font-family: inherit; }
+  .email-input:focus { border-color: var(--accent); }
+  .email-input::placeholder { color: var(--text3); }
   td.td-statut { width: 140px; }
   td.td-date { width: 130px; }
   td.td-note { min-width: 120px; }
@@ -127,25 +132,41 @@
   .export-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ─── ADD MODAL ─── */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-start; justify-content: center; padding: 24px 12px; overflow-y: auto; }
   .modal-overlay.open { display: flex; }
-  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 520px; max-width: 100%; margin: auto 0; }
   .modal.modal-lg { width: 960px; }
-  .modal h2 { font-size: 16px; margin-bottom: 20px; color: var(--text); }
-  .form-row { display: flex; gap: 12px; margin-bottom: 12px; }
-  .form-group { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+  .modal h2 { font-size: 16px; margin-bottom: 16px; color: var(--text); }
+  .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .form-group { flex: 1 1 140px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
   .form-group label { font-size: 12px; color: var(--text2); }
-  .form-group input, .form-group select, .form-group textarea { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 10px; font-size: 13px; outline: none; font-family: inherit; }
+  .form-group input, .form-group select, .form-group textarea { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 10px; font-size: 13px; outline: none; font-family: inherit; width: 100%; }
   .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
 
   .campaign-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-  .campaign-list { max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .campaign-toolbar input[type=text],
+  .campaign-toolbar input[type=email],
+  .campaign-toolbar select {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 7px 10px; font-size: 13px; outline: none;
+  }
+  .campaign-toolbar input[type=text]:focus,
+  .campaign-toolbar input[type=email]:focus,
+  .campaign-toolbar select:focus { border-color: var(--accent); }
+  .quick-add {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end;
+    padding: 12px; margin-bottom: 12px; background: var(--surface2);
+    border: 1px dashed var(--border); border-radius: 8px;
+  }
+  .quick-add .form-group { flex: 1 1 160px; margin: 0; }
+  .campaign-list { max-height: min(280px, 40vh); overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
   .campaign-list table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .campaign-list th { position: sticky; top: 0; background: var(--surface2); color: var(--text2); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .campaign-list th { position: sticky; top: 0; background: var(--surface2); color: var(--text2); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); z-index: 1; }
   .campaign-list td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   .campaign-list tr:hover { background: var(--surface2); }
-  .campaign-hint { font-size: 12px; color: var(--text3); margin: 8px 0 0; line-height: 1.4; }
+  .campaign-hint { font-size: 12px; color: var(--text3); margin: 8px 0 0; line-height: 1.45; }
+  .campaign-hint code { background: var(--surface2); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
   .opt-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 10px 0; font-size: 12px; color: var(--text2); }
   .opt-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
   .mail-badge { display: inline-block; border-radius: 4px; padding: 2px 7px; font-size: 10px; font-weight: 600; }
@@ -177,8 +198,11 @@
     .header, .filters, .stats, .table-wrap { padding: 12px; }
     .filters { gap: 6px; }
     .filters input[type=text] { width: 100%; }
-    .stat { min-width: 70px; padding: 8px 10px; }
-    .stat .num { font-size: 18px; }
+    .filters-info { text-align: left; margin-left: 0; width: 100%; }
+    .stat { min-width: 76px; padding: 8px 10px; }
+    .stat .num { font-size: 17px; }
+    .header-actions { width: 100%; }
+    .header-actions .btn { flex: 1 1 calc(50% - 4px); text-align: center; }
   }
 </style>
 </head>
@@ -186,10 +210,12 @@
 
 <div class="header">
   <h1>Suivi Candidatures <span>Alternance</span> — Architecture & Design</h1>
-  <button class="btn primary" onclick="openCampaignModal()">✉ Campagne mail</button>
-  <button class="btn" onclick="openStatsModal()">📊 Stats campagnes</button>
-  <button class="btn primary" onclick="openAddModal()">+ Ajouter une entreprise</button>
-  <button class="export-btn" onclick="exportExcel()">⬇ Export Excel</button>
+  <div class="header-actions">
+    <button class="btn primary" onclick="openCampaignModal()">✉ Campagne mail</button>
+    <button class="btn" onclick="openStatsModal()">📊 Stats campagnes</button>
+    <button class="btn primary" onclick="openAddModal()">+ Ajouter</button>
+    <button class="export-btn" onclick="exportExcel()">⬇ Excel</button>
+  </div>
 </div>
 
 <div class="stats" id="stats"></div>
@@ -203,6 +229,7 @@
     <option value="Libourne">Libourne (20km)</option>
     <option value="Saintes">Saintes (40km)</option>
     <option value="Angoulême">Angoulême (40km)</option>
+    <option value="Contact manuel">Contact manuel</option>
   </select>
   <select id="fStatut" onchange="render()">
     <option value="">Tous les statuts</option>
@@ -268,11 +295,22 @@
       </div>
       <div class="form-group">
         <label>Sélection</label>
-        <div style="display:flex;gap:6px;align-items:center;height:100%">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <button class="btn" type="button" onclick="selectAllCampaign(true)">Tout cocher</button>
           <button class="btn" type="button" onclick="selectAllCampaign(false)">Tout décocher</button>
         </div>
       </div>
+    </div>
+    <div class="quick-add">
+      <div class="form-group">
+        <label>Ajouter un contact à la main</label>
+        <input type="text" id="quick-nom" placeholder="Nom (ex: Dupont RH)">
+      </div>
+      <div class="form-group">
+        <label>E-mail *</label>
+        <input type="email" id="quick-email" placeholder="dupont@gmail.com">
+      </div>
+      <button class="btn primary" type="button" onclick="addQuickContact()">+ Ajouter</button>
     </div>
     <div class="campaign-toolbar">
       <input type="text" id="camp-search" placeholder="Rechercher…" oninput="renderCampaignList()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:7px 12px;font-size:13px;width:180px;outline:none">
@@ -283,8 +321,8 @@
         <option value="Libourne">Libourne</option>
         <option value="Saintes">Saintes</option>
         <option value="Angoulême">Angoulême</option>
+        <option value="Contact manuel">Contact manuel</option>
       </select>
-      <select id="camp-type" onchange="renderCampaignList()">
         <option value="">Tous les métiers</option>
         <option value="architecture">Cabinet d'architecture</option>
         <option value="interieur">Architecte d'intérieur</option>
@@ -415,11 +453,16 @@
           <option value="Libourne">Libourne (20km)</option>
           <option value="Saintes">Saintes (40km)</option>
           <option value="Angoulême">Angoulême (40km)</option>
+          <option value="Contact manuel">Contact manuel</option>
         </select>
       </div>
       <div class="form-group">
         <label>Téléphone</label>
         <input type="text" id="m-tel" placeholder="05 XX XX XX XX">
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="m-email" placeholder="dupont@gmail.com">
       </div>
     </div>
     <div class="form-row">
@@ -817,9 +860,7 @@ function render() {
     const siteHref = c.site ? (c.site.startsWith('http') ? c.site : 'https://' + c.site) : '';
 
     const email = getEffectiveEmail(c, id);
-    const emailHref = isUsableEmail(email)
-      ? `<a href="mailto:${email}" style="color:var(--accent);font-size:11px">${email}</a>`
-      : (email ? `<span style="color:var(--text3);font-size:11px">${email}</span>` : '<span style="color:var(--text3);font-size:11px">—</span>');
+    const emailEsc = String(email || '').replace(/"/g, '&quot;');
     const distTxt = c.distanceRef ? `<span style="font-size:11px;color:var(--text2)">${c.distanceRef}</span>` : '—';
     const ms = d.mailStatus || 'none';
 
@@ -834,7 +875,8 @@ function render() {
       <td class="td-tel">${distTxt}</td>
       <td class="td-type">${c.type || '—'}</td>
       <td class="td-tel">${siteTxt ? `<a href="${siteHref}" target="_blank" style="color:var(--text3);font-size:11px">${siteTxt}</a>` : '—'}</td>
-      <td class="td-tel">${emailHref}
+      <td class="td-email">
+        <input type="email" class="email-input" value="${emailEsc}" placeholder="ajouter@email.com" onchange="setCompanyEmail(${JSON.stringify(String(id))},this.value)" title="Modifier l'e-mail">
         <div style="margin-top:4px">
           <select class="sel-statut" style="font-size:11px;padding:3px 6px" onchange="setMailStatus(${JSON.stringify(String(id))},this.value)" title="Statut campagne mail">
             ${Object.entries(MAIL_STATUTS).map(([k,v]) => `<option value="${k}" ${ms===k?'selected':''}>${v.label}</option>`).join('')}
@@ -864,6 +906,7 @@ function zoneBadgeClass(zone) {
   if (z.includes('libourne')) return 'badge-libourne';
   if (z.includes('saintes')) return 'badge-saintes';
   if (z.includes('angoulême') || z.includes('angouleme')) return 'badge-angouleme';
+  if (z.includes('manuel') || z.includes('contact')) return 'badge-poitiers';
   return '';
 }
 
@@ -954,7 +997,10 @@ function openAddModal() {
 
 function closeAddModal() {
   document.getElementById('addModal').classList.remove('open');
-  ['m-nom','m-adresse','m-ville','m-cp','m-tel','m-site','m-type','m-notes'].forEach(id => { document.getElementById(id).value = ''; });
+  ['m-nom','m-adresse','m-ville','m-cp','m-tel','m-email','m-site','m-type','m-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
 }
 
 document.getElementById('addModal').addEventListener('click', function(e) {
@@ -964,7 +1010,9 @@ document.getElementById('addModal').addEventListener('click', function(e) {
 function addCompany() {
   const nom = document.getElementById('m-nom').value.trim();
   const ville = document.getElementById('m-ville').value.trim();
+  const email = document.getElementById('m-email').value.trim();
   if (!nom || !ville) { alert('Nom et ville sont requis.'); return; }
+  if (email && !isUsableEmail(email)) { alert('E-mail invalide.'); return; }
   const id = 'custom_' + Date.now();
   const company = {
     _id: id,
@@ -974,15 +1022,63 @@ function addCompany() {
     cp: document.getElementById('m-cp').value.trim(),
     tel: document.getElementById('m-tel').value.trim(),
     site: document.getElementById('m-site').value.trim(),
-    type: document.getElementById('m-type').value.trim(),
+    email,
+    type: document.getElementById('m-type').value.trim() || 'Contact',
     zone: document.getElementById('m-zone').value,
+    distanceRef: '',
   };
   if (!userData._custom) userData._custom = [];
   userData._custom.push(company);
   const notes = document.getElementById('m-notes').value.trim();
-  userData[id] = { postule: false, statut: 'a_contacter', dateContact: '', dateRelance: '', notes };
+  userData[id] = {
+    postule: false, statut: 'a_contacter', dateContact: '', dateRelance: '', notes,
+    mailStatus: 'none', campaignCount: 0, linkClicked: false, linkClickCount: 0, linkSent: false
+  };
   saveData();
   closeAddModal();
+  render();
+}
+
+function setCompanyEmail(id, value) {
+  const d = getCompanyData(id);
+  const email = (value || '').trim();
+  d.emailOverride = email;
+  if (d.mailStatus === 'bounce' && isUsableEmail(email)) d.mailStatus = 'none';
+  saveData();
+}
+
+function addQuickContact() {
+  const nom = (document.getElementById('quick-nom').value || '').trim() || 'Contact';
+  const email = (document.getElementById('quick-email').value || '').trim();
+  if (!isUsableEmail(email)) {
+    alert('Indique un e-mail valide (ex: dupont@gmail.com).');
+    return;
+  }
+  const id = 'custom_' + Date.now();
+  const company = {
+    _id: id,
+    nom,
+    adresse: '',
+    ville: '—',
+    cp: '',
+    tel: '',
+    site: '',
+    email,
+    type: 'Contact manuel',
+    zone: 'Contact manuel',
+    distanceRef: '',
+  };
+  if (!userData._custom) userData._custom = [];
+  userData._custom.push(company);
+  userData[id] = {
+    postule: false, statut: 'a_contacter', dateContact: '', dateRelance: '', notes: '',
+    mailStatus: 'none', campaignCount: 0, linkClicked: false, linkClickCount: 0, linkSent: false
+  };
+  campaignSelected.add(String(id));
+  saveData();
+  document.getElementById('quick-nom').value = '';
+  document.getElementById('quick-email').value = '';
+  renderCampaignList();
   render();
 }
 

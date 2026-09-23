@@ -207,20 +207,32 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
 
   @media (max-width: 768px) {
-    .header, .filters, .stats, .table-wrap { padding: 12px; }
-    .filters { gap: 6px; }
-    .filters input[type=text] { width: 100%; }
-    .filters select { flex: 1 1 calc(50% - 4px); min-width: 0; }
-    .filters-info { text-align: left; margin-left: 0; width: 100%; }
-    .stat { min-width: calc(33.33% - 6px); max-width: none; flex: 1 1 calc(33.33% - 6px); padding: 8px 6px; }
-    .stat .num { font-size: 16px; }
-    .stat .lbl { font-size: 9px; white-space: normal; line-height: 1.2; }
+    .header { padding: 12px; gap: 8px; }
+    .header h1 { font-size: 15px; flex: 1 1 100%; }
     .header-actions { width: 100%; }
-    .header-actions .btn, .header-actions .export-btn { flex: 1 1 calc(50% - 4px); text-align: center; }
-    .table-wrap { -webkit-overflow-scrolling: touch; }
-    #mainTable { min-width: 920px; }
-    .modal.modal-lg { width: 100%; }
-    .del-btn { min-width: 36px; min-height: 36px; }
+    .header-actions .btn, .header-actions .export-btn { flex: 1 1 calc(50% - 4px); text-align: center; font-size: 12px; padding: 10px 8px; }
+    .filters, .stats, .table-wrap { padding: 10px 12px; }
+    .filters { gap: 6px; }
+    .filters input[type=text] { width: 100%; font-size: 16px; /* évite zoom iOS */ }
+    .filters select { flex: 1 1 calc(50% - 4px); min-width: 0; font-size: 14px; padding: 10px 8px; }
+    .filters .btn { width: 100%; padding: 10px; }
+    .filters-info { text-align: left; margin-left: 0; width: 100%; font-size: 11px; line-height: 1.35; }
+    .stats { gap: 6px; }
+    .stat { min-width: calc(50% - 4px); max-width: none; flex: 1 1 calc(50% - 4px); padding: 10px 8px; }
+    .stat .num { font-size: 18px; }
+    .stat .lbl { font-size: 10px; white-space: normal; line-height: 1.25; }
+    .table-wrap { -webkit-overflow-scrolling: touch; padding-bottom: 24px; }
+    #mainTable { min-width: 960px; }
+    .modal-overlay { padding: 12px 8px; align-items: stretch; }
+    .modal, .modal.modal-lg { width: 100%; max-width: 100%; border-radius: 10px; padding: 16px; }
+    .campaign-list { max-height: 40vh; }
+    .quick-add { flex-direction: column; align-items: stretch; }
+    .quick-add .btn { width: 100%; padding: 12px; }
+    .modal-actions { flex-direction: column-reverse; }
+    .modal-actions .btn { width: 100%; padding: 12px; }
+    .del-btn { min-width: 40px; min-height: 40px; }
+    .flash { left: 12px; right: 12px; transform: none; bottom: 16px; text-align: center; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 </head>
@@ -857,9 +869,10 @@ function render() {
   // Count
   const totalAll = getAllCompanies().length;
   const withMail = getAllCompanies().filter(c => isUsableEmail(getEffectiveEmail(c, getCompanyId(c)))).length;
+  const noMail = totalAll - withMail;
   document.getElementById('count-info').textContent = companies.length === totalAll
-    ? `${totalAll} entreprises · ${withMail} avec e-mail`
-    : `${companies.length} affichée${companies.length > 1 ? 's' : ''} / ${totalAll} · ${withMail} avec e-mail`;
+    ? `${totalAll} entreprises · ${withMail} avec e-mail · ${noMail} sans mail / magasin`
+    : `${companies.length} affichée${companies.length > 1 ? 's' : ''} / ${totalAll} · ${withMail} e-mail · ${noMail} magasin`;
 
   const tbody = document.getElementById('tbody');
   const empty = document.getElementById('empty');
@@ -957,7 +970,9 @@ function renderStats() {
     if (d.linkClicked) totals.clicked++;
   });
   document.getElementById('stats').innerHTML = `
+    <div class="stat s-total"><div class="num">${totals.total}</div><div class="lbl">Total</div></div>
     <div class="stat"><div class="num" style="color:var(--accent)">${totals.withEmail}</div><div class="lbl">Avec e-mail</div></div>
+    <div class="stat"><div class="num" style="color:var(--text3)">${totals.total - totals.withEmail}</div><div class="lbl">Sans mail / magasin</div></div>
     <div class="stat s-postule"><div class="num">${totals.postule}</div><div class="lbl">Postulé</div></div>
     <div class="stat s-contacte"><div class="num" style="color:var(--blue)">${totals.contacte}</div><div class="lbl">Contacté</div></div>
     <div class="stat s-attente"><div class="num">${totals.attente}</div><div class="lbl">En attente</div></div>
@@ -1678,6 +1693,7 @@ function renderCampaignStats() {
   document.getElementById('camp-stats-grid').innerHTML = `
     <div class="stats-card"><div class="n">${camps.length}</div><div class="l">Campagnes</div></div>
     <div class="stats-card"><div class="n">${withEmail}</div><div class="l">Avec e-mail</div></div>
+    <div class="stats-card"><div class="n" style="color:var(--text3)">${all.length - withEmail}</div><div class="l">Sans mail / magasin</div></div>
     <div class="stats-card"><div class="n" style="color:var(--text3)">${never}</div><div class="l">Pas contactés</div></div>
     <div class="stats-card"><div class="n" style="color:var(--blue)">${sent}</div><div class="l">Envoyés</div></div>
     <div class="stats-card"><div class="n" style="color:var(--accent)">${clicked}</div><div class="l">Liens ouverts</div></div>

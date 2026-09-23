@@ -957,7 +957,6 @@ function renderStats() {
     if (d.linkClicked) totals.clicked++;
   });
   document.getElementById('stats').innerHTML = `
-    <div class="stat s-total"><div class="num">${totals.total}</div><div class="lbl">Total</div></div>
     <div class="stat"><div class="num" style="color:var(--accent)">${totals.withEmail}</div><div class="lbl">Avec e-mail</div></div>
     <div class="stat s-postule"><div class="num">${totals.postule}</div><div class="lbl">Postulé</div></div>
     <div class="stat s-contacte"><div class="num" style="color:var(--blue)">${totals.contacte}</div><div class="lbl">Contacté</div></div>

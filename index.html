@@ -1274,36 +1274,64 @@ function packCompact(storeId, companyId, dest) {
 }
 
 async function tryShorten(url) {
-  const endpoints = [
-    'https://is.gd/create.php?format=json&url=',
-    'https://v.gd/create.php?format=json&url=',
-  ];
-  for (const base of endpoints) {
-    try {
-      const res = await Promise.race([
-        fetch(base + encodeURIComponent(url)),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2500))
-      ]);
-      if (!res || !res.ok) continue;
+  const attempts = [
+    async () => {
+      const res = await fetch('https://is.gd/create.php?format=json&url=' + encodeURIComponent(url));
+      if (!res.ok) return null;
       const j = await res.json();
-      if (j && j.shorturl && /^https?:\/\//i.test(j.shorturl)) return j.shorturl;
+      return j && j.shorturl;
+    },
+    async () => {
+      const res = await fetch('https://v.gd/create.php?format=json&url=' + encodeURIComponent(url));
+      if (!res.ok) return null;
+      const j = await res.json();
+      return j && j.shorturl;
+    },
+    async () => {
+      const res = await fetch('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(url));
+      if (!res.ok) return null;
+      const t = (await res.text()).trim();
+      return /^https?:\/\//i.test(t) ? t : null;
+    },
+  ];
+  for (const fn of attempts) {
+    try {
+      const short = await Promise.race([
+        fn(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('t')), 2200))
+      ]);
+      if (short && /^https?:\/\//i.test(short) && short.length < url.length) return short;
     } catch (e) {}
   }
   return null;
 }
 
-/** Lien court : is.gd/… (pointe vers un lien autonome compact) */
+/** Lien court pour le mail (is.gd si dispo, sinon …/l?r=abc1234 ≈ 50 car.) */
 async function buildQuietLink(storeId, companyId, targetUrl) {
   let dest = (targetUrl || '').trim();
   if (!/^https?:\/\//i.test(dest)) dest = 'https://' + dest;
 
-  // Lien autonome compact (pas d’expiration) — bien plus court que l’ancien #json
+  // 1) Lien autonome compact (ne caduque pas) — cible idéale d’un raccourcisseur
   const compact = getLinkBase() + 'l?d=' + packCompact(storeId, companyId, dest);
-
-  // Raccourci public type is.gd/Ab12Cd
   const short = await tryShorten(compact);
   if (short) return short;
-  return compact;
+
+  // 2) Ultra-court maison : …/l?r=xxxxxxx (mapping distant)
+  const token = shortToken(7);
+  const map = { s: storeId, c: String(companyId), u: dest };
+  try { localStorage.setItem('nbl_' + token, JSON.stringify(map)); } catch (e) {}
+  try {
+    await Promise.race([
+      fetch('https://ntfy.sh/nbl-' + encodeURIComponent(token), {
+        method: 'POST',
+        headers: { Title: 'm', 'Content-Type': 'text/plain' },
+        body: JSON.stringify(map)
+      }),
+      new Promise((r) => setTimeout(r, 1800))
+    ]);
+  } catch (e) {}
+
+  return getLinkBase() + 'l?r=' + token;
 }
 
 function injectLinkInBody(body, url) {

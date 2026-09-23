@@ -683,6 +683,8 @@ const BASE_COMPANIES = [
 
 ];
 
+BASE_COMPANIES.forEach((c, i) => { c._id = 'b' + i; });
+
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
@@ -736,6 +738,8 @@ function loadData() {
   try { userData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { userData = {}; }
   if (!userData._meta) userData._meta = {};
   if (!userData._campaigns) userData._campaigns = [];
+  if (!userData._custom) userData._custom = [];
+  if (!userData._hidden) userData._hidden = [];
 }
 
 function saveData() {
@@ -759,7 +763,8 @@ function getCompanyData(id) {
 }
 
 function getCompanyId(c, fallbackIdx) {
-  return c._id != null ? c._id : fallbackIdx;
+  if (c && c._id != null) return c._id;
+  return fallbackIdx;
 }
 
 function getEffectiveEmail(c, id) {
@@ -775,8 +780,9 @@ function isUsableEmail(email) {
 }
 
 function getAllCompanies() {
+  const hidden = new Set((userData._hidden || []).map(String));
   const custom = userData._custom || [];
-  return [...BASE_COMPANIES, ...custom];
+  return [...BASE_COMPANIES, ...custom].filter(c => c && c._id != null && !hidden.has(String(c._id)));
 }
 
 function todayISO() {
@@ -797,8 +803,8 @@ function render() {
   let companies = getAllCompanies();
 
   // Filter
-  companies = companies.filter((c, i) => {
-    const d = getCompanyData(c._id || i);
+  companies = companies.filter((c) => {
+    const d = getCompanyData(getCompanyId(c));
     if (search && !( (c.nom||'').toLowerCase().includes(search) || (c.ville||'').toLowerCase().includes(search) || (c.type||'').toLowerCase().includes(search) || (c.cp||'').includes(search) )) return false;
     if (fZone && c.zone !== fZone) return false;
     if (fStatut && d.statut !== fStatut) return false;
@@ -810,8 +816,8 @@ function render() {
 
   // Sort
   companies = companies.sort((a, b) => {
-    const da = getCompanyData(a._id || getAllCompanies().indexOf(a));
-    const db = getCompanyData(b._id || getAllCompanies().indexOf(b));
+    const da = getCompanyData(getCompanyId(a));
+    const db = getCompanyData(getCompanyId(b));
     let va, vb;
     if (sortField === 'statut') { va = da.statut; vb = db.statut; }
     else { va = (a[sortField] || '').toLowerCase(); vb = (b[sortField] || '').toLowerCase(); }
@@ -837,9 +843,8 @@ function render() {
   }
   empty.style.display = 'none';
 
-  tbody.innerHTML = companies.map((c, idx) => {
-    const globalIdx = getAllCompanies().findIndex(x => x === c);
-    const id = c._id || globalIdx;
+  tbody.innerHTML = companies.map((c) => {
+    const id = getCompanyId(c);
     const d = getCompanyData(id);
     const zoneClass = zoneBadgeClass(c.zone);
     let rowClass = '';
@@ -967,18 +972,20 @@ function resetFilters() {
 }
 
 function deleteCompany(id) {
-  const all = getAllCompanies();
   const sid = String(id);
-  const c = all.find((x, i) => String(x._id != null ? x._id : i) === sid);
-  if (!c) return;
-  if (!confirm(`Supprimer "${c.nom}" ?`)) return;
-  if (c._id) {
-    userData._custom = (userData._custom || []).filter(x => String(x._id) !== sid);
-  }
-  delete userData[id];
-  delete userData[sid];
+  const all = getAllCompanies();
+  const c = all.find(x => String(getCompanyId(x)) === sid);
+  if (!c) { flash('Contact introuvable'); return; }
+  if (!confirm('Supprimer « ' + c.nom + ' » ?')) return;
+  if (!userData._hidden) userData._hidden = [];
+  if (!userData._hidden.map(String).includes(sid)) userData._hidden.push(sid);
+  userData._custom = (userData._custom || []).filter(x => String(x._id) !== sid);
+  try { delete userData[sid]; } catch (e) {}
+  try { campaignSelected.delete(sid); } catch (e) {}
   saveData();
   render();
+  if (document.getElementById('campaignModal')?.classList.contains('open')) renderCampaignList();
+  flash('Supprimé : ' + c.nom);
 }
 
 // ─── ADD MODAL ───

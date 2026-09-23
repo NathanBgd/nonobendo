@@ -181,16 +181,6 @@
     transition: opacity .2s ease;
   }
   .flash.show { opacity: 1; }
-  .attach-hint { font-size: 12px; color: var(--text3); margin: 0 0 8px; line-height: 1.4; }
-  .attach-helper {
-    position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%);
-    width: min(420px, calc(100% - 24px)); background: #1e293b; color: #e2e8f0;
-    border: 1px solid var(--accent); border-radius: 10px; padding: 14px 16px;
-    z-index: 10000; box-shadow: 0 12px 32px rgba(0,0,0,.45); display: none; font-size: 13px; line-height: 1.45;
-  }
-  .attach-helper.show { display: block; }
-  .attach-helper .btn { margin-top: 10px; width: 100%; }
-  #camp-attach { font-size: 13px; color: var(--text2); }
   .mail-badge { display: inline-block; border-radius: 4px; padding: 2px 7px; font-size: 10px; font-weight: 600; }
   .mail-badge.none { background: #2a2f42; color: var(--text3); }
   .mail-badge.sent { background: #1e3a5f; color: #60a5fa; }
@@ -242,7 +232,6 @@
     .modal-actions .btn { width: 100%; padding: 12px; }
     .del-btn { min-width: 40px; min-height: 40px; }
     .flash { left: 12px; right: 12px; transform: none; bottom: 16px; text-align: center; }
-    .attach-helper { left: 12px; right: 12px; transform: none; bottom: 70px; width: auto; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
@@ -401,20 +390,11 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Pièce jointe CV (PDF, Word…)</label>
-        <input type="file" id="camp-attach" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="onCampaignAttachChange(this)">
-        <span id="camp-attach-name" style="font-size:11px;color:var(--text3);margin-top:4px"></span>
-      </div>
-    </div>
-    <p class="attach-hint">Gmail n’accepte pas la PJ automatiquement. Si tu choisis un fichier, il se télécharge puis tu le joins avec le trombone 📎 dans Gmail.</p>
-    <div class="form-row">
-      <div class="form-group">
         <label>Message court</label>
         <textarea id="camp-body" rows="5">Bonjour,
 
 Je candidate en alternance Architecture / Design.
-Mon CV est en pièce jointe.
-{{LIEN}}
+Voici mon CV : {{LIEN}}
 
 Cordialement</textarea>
       </div>
@@ -451,7 +431,6 @@ Cordialement</textarea>
   </div>
 </div>
 <div id="flash" class="flash" role="status"></div>
-<div id="attachHelper" class="attach-helper" role="status"></div>
 
 <!-- Modal ajout -->
 <div class="modal-overlay" id="addModal">
@@ -739,7 +718,6 @@ let sortField = 'zone';
 let sortAsc = true;
 let userData = {};
 let campaignSelected = new Set();
-let campaignAttachFile = null;
 
 const STATUTS = {
   a_contacter: { label: 'À contacter', color: '#64748b' },
@@ -1449,48 +1427,8 @@ function injectLinkInBody(body, url) {
       .replace(/\n{3,}/g, '\n\n')
       .trim();
   }
-  if (body.includes('{{LIEN}}')) {
-    const line = body.includes('pièce jointe') ? ('Lien : ' + url) : url;
-    return body.split('{{LIEN}}').join(line);
-  }
+  if (body.includes('{{LIEN}}')) return body.split('{{LIEN}}').join(url);
   return body + '\n\n' + url;
-}
-
-function onCampaignAttachChange(input) {
-  const f = input.files && input.files[0];
-  campaignAttachFile = f || null;
-  const label = document.getElementById('camp-attach-name');
-  if (!label) return;
-  if (!f) { label.textContent = ''; return; }
-  const ko = Math.max(1, Math.round(f.size / 1024));
-  label.textContent = f.name + ' · ' + ko + ' Ko';
-}
-
-function downloadAttachForGmail(file) {
-  if (!file) return;
-  const url = URL.createObjectURL(file);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = file.name || 'CV.pdf';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
-}
-
-function showAttachHelper(fileName) {
-  const bar = document.getElementById('attachHelper');
-  if (!bar) return;
-  bar.innerHTML = `<strong>📎 Joins la pièce jointe dans Gmail</strong><br>`
-    + `<span style="color:var(--accent)">${fileName}</span><br>`
-    + `<span style="color:var(--text3)">Fichier téléchargé → dans Gmail clique le trombone → choisis ce fichier → Envoyer</span>`
-    + `<button type="button" class="btn primary" onclick="hideAttachHelper()">C’est fait</button>`;
-  bar.classList.add('show');
-}
-
-function hideAttachHelper() {
-  const bar = document.getElementById('attachHelper');
-  if (bar) bar.classList.remove('show');
 }
 
 function getCampaignCandidates() {
@@ -1564,7 +1502,6 @@ async function sendCampaign() {
 
   let linkRaw = (document.getElementById('camp-link').value || '').trim();
   if (linkRaw && !/^https?:\/\//i.test(linkRaw)) linkRaw = 'https://' + linkRaw;
-  const attach = campaignAttachFile;
 
   const all = getAllCompanies();
   const targets = [];
@@ -1584,12 +1521,6 @@ async function sendCampaign() {
   const withLink = !!linkRaw;
   const storeId = withLink ? ensureClickStore() : null;
   let opened = 0;
-
-  // PJ : télécharge le fichier pour le joindre facilement dans Gmail
-  if (attach) {
-    downloadAttachForGmail(attach);
-    showAttachHelper(attach.name || 'CV.pdf');
-  }
 
   if (withLink) {
     for (let i = 0; i < targets.length; i++) {
@@ -1639,7 +1570,6 @@ async function sendCampaign() {
     ids: targets.map(t => String(t.id)),
     tracked: withLink,
     link: linkRaw || '',
-    attach: attach ? (attach.name || 'fichier') : '',
     storeId: storeId || null,
   });
   if (userData._campaigns.length > 50) userData._campaigns.length = 50;
@@ -1647,14 +1577,11 @@ async function sendCampaign() {
   campaignSelected = new Set();
   closeCampaignModal();
   render();
-
-  let msg = withLink
+  flash(withLink
     ? `Gmail : ${targets.length} mail(s) — Envoyer dans chaque fenêtre`
     : (opened > 1
       ? `Gmail : ${opened} fenêtres — clique Envoyer`
-      : `Gmail ouvert — clique Envoyer (${targets.length})`);
-  if (attach) msg = 'PJ téléchargée — joins-la avec 📎 puis Envoyer';
-  flash(msg);
+      : `Gmail ouvert — clique Envoyer (${targets.length})`));
 }
 
 async function syncLinkClicks() {

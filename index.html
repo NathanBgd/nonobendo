@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Suivi Candidatures Alternance — Architecture & Design</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #0f1117;
@@ -157,7 +158,7 @@
 <div class="header">
   <h1>Suivi Candidatures <span>Alternance</span> — Architecture & Design</h1>
   <button class="btn primary" onclick="openAddModal()">+ Ajouter une entreprise</button>
-  <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+  <button class="export-btn" onclick="exportExcel()">⬇ Export Excel</button>
 </div>
 
 <div class="stats" id="stats"></div>
@@ -209,8 +210,10 @@
         <th onclick="sortBy('nom')">Entreprise <span class="sort-icon">↕</span></th>
         <th onclick="sortBy('ville')">Ville <span class="sort-icon">↕</span></th>
         <th onclick="sortBy('zone')">Zone <span class="sort-icon">↕</span></th>
+        <th onclick="sortBy('distanceRef')">Distance <span class="sort-icon">↕</span></th>
         <th>Secteur</th>
-        <th>Contact</th>
+        <th>Site / Tel</th>
+        <th>Email</th>
         <th onclick="sortBy('statut')">Statut <span class="sort-icon">↕</span></th>
         <th>Date contact</th>
         <th>Date relance</th>
@@ -295,200 +298,202 @@
 const BASE_COMPANIES = [
 
 // ─── LE BOUSCAT / BORDEAUX ───────────────────────────────────────────────
-{ nom:"Atelier d'Architecture Baobab", adresse:"63 Avenue de la Libération Charles de Gaulle", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Atelier 41", adresse:"35 Rue Jules Ferry", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
-{ nom:"B2D Architectes", adresse:"44 Rue de Caudéran", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
-{ nom:"OS'Design", adresse:"12 Rue Jean Mermoz", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Cabinet d'architecture / Design", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Archi 14", adresse:"118 Rue des Écus", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Archi'Demain", adresse:"9 Rue du Commandant Charcot", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Guillaud François Architecte", adresse:"93 Rue du Professeur Arnozan", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Peyrefitte Philippe Architecte", adresse:"25 Rue Voltaire", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Denis Lecat Architecte", adresse:"41 Rue des Écus", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Baillon Laurent Architecte", adresse:"285 Avenue d'Eysines", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Adeline Maury Architecte", adresse:"203 Avenue Président Robert Schuman, Bât. B", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
-{ nom:"BZA Boris Zielinski Architecte", adresse:"75 Rue Max Coyne", ville:"Le Bouscat", cp:"33110", tel:"", site:"", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Soul Sens Architecture (Soulsens)", adresse:"10 Rue Montesquieu", ville:"Le Bouscat", cp:"33110", tel:"06 71 60 11 18", site:"www.soulsens.com", type:"Architecte d'intérieur / Designer d'espace", zone:"Le Bouscat / Bordeaux" },
-{ nom:"JEGU Housing Concept", adresse:"8 Rue Louis Jouvet", ville:"Le Bouscat", cp:"33110", tel:"", site:"www.jeguhousingconcept.fr", type:"Architecte d'intérieur / Designer d'espace", zone:"Le Bouscat / Bordeaux" },
-{ nom:"EVEN BTP", adresse:"126 Rue Laharpe", ville:"Le Bouscat", cp:"33110", tel:"05 56 42 62 05", site:"www.even-btp.fr", type:"Bureau d'études / Maître d'œuvre", zone:"Le Bouscat / Bordeaux" },
-{ nom:"DBN Architectes", adresse:"5 Rue des Vignobles", ville:"Mérignac", cp:"33700", tel:"05 40 01 96 23", site:"", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Concept-Déco Bordeaux (Filiz Erikci)", adresse:"2 Rue Marbotin", ville:"Mérignac", cp:"33700", tel:"06 81 62 81 67", site:"www.concept-deco-bordeaux.fr", type:"Architecte d'intérieur / Décoratrice", zone:"Le Bouscat / Bordeaux" },
-{ nom:"L'Atelier D. (Nathalie Bourgoint)", adresse:"Mérignac", ville:"Mérignac", cp:"33700", tel:"05 32 00 21 54", site:"www.agence-latelierd.fr", type:"Architecte d'intérieur", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Cotrabat", adresse:"18 Avenue de la Somme", ville:"Mérignac", cp:"33700", tel:"06 20 38 62 39", site:"www.cotrabat.fr", type:"Maître d'œuvre", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Schmidt Mérignac", adresse:"24 Avenue du Meilleur Ouvrier de France", ville:"Mérignac", cp:"33700", tel:"05 56 13 18 93", site:"www.home-design.schmidt", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Cuisinella Mérignac", adresse:"7 Rue Euclide", ville:"Mérignac", cp:"33700", tel:"05 56 10 51 75", site:"www.ma.cuisinella", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Mobalpa Bordeaux Mérignac", adresse:"14 Rue Georges Ohm, ZAC Chemin Long", ville:"Mérignac", cp:"33700", tel:"05 35 37 67 67", site:"www.mobalpa.fr", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Ixina Bordeaux Mérignac", adresse:"59 Avenue Henri Vigneau", ville:"Mérignac", cp:"33700", tel:"05 56 42 01 35", site:"www.ixina.fr", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Arthur Bonnet Bordeaux Mérignac", adresse:"208 Avenue de la Marne", ville:"Mérignac", cp:"33700", tel:"", site:"www.arthur-bonnet.com", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Cuisines Références Mérignac", adresse:"8 Rue Albert Einstein", ville:"Mérignac", cp:"33700", tel:"05 57 81 05 45", site:"www.cuisines-references.fr", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Inova Cuisine Mérignac", adresse:"22 Rue Albert Einstein", ville:"Mérignac", cp:"33700", tel:"05 40 45 28 28", site:"www.inova-cuisine.fr", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Roche Bobois Mérignac", adresse:"24 Avenue Jean Perrin, Village du Meuble", ville:"Mérignac", cp:"33700", tel:"05 56 34 23 98", site:"www.roche-bobois.com", type:"Design / Décoration intérieure / Mobilier haut de gamme", zone:"Le Bouscat / Bordeaux" },
-{ nom:"SoCoo'c Bordeaux Mérignac", adresse:"Mérignac", ville:"Mérignac", cp:"33700", tel:"", site:"www.socooc.com", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Leroy Merlin Mérignac", adresse:"90 Avenue Henri Vigneau", ville:"Mérignac", cp:"33693", tel:"", site:"www.leroymerlin.fr", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"ABRSO", adresse:"Bassens", ville:"Bassens", cp:"33530", tel:"05 56 38 41 50", site:"www.abrso.fr", type:"Agenceur / Aménagement intérieur", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Archiconstruction", adresse:"Bordeaux", ville:"Bordeaux", cp:"33000", tel:"06 20 38 62 39", site:"www.archiconstruction.fr", type:"Maître d'œuvre", zone:"Le Bouscat / Bordeaux" },
-{ nom:"STUDIOPLANO", adresse:"Bordeaux", ville:"Bordeaux", cp:"33000", tel:"", site:"www.studioplano.fr", type:"Scénographe / Architecte d'intérieur / Designer", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Au Long Cours", adresse:"21 Avenue Jeanne d'Arc", ville:"Bordeaux", cp:"33000", tel:"09 81 46 18 70", site:"www.aulongcours.com", type:"Designer d'espace / Scénographe", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Imagineur d'Espaces", adresse:"Hangar 15, Quai des Chartrons", ville:"Bordeaux", cp:"33300", tel:"06 77 60 87 80", site:"www.imagineurdespaces.com", type:"Architecte d'intérieur / Designer d'espace", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Crème Studio", adresse:"39 Cours de la Martinique", ville:"Bordeaux", cp:"33000", tel:"", site:"www.creme-studio.fr", type:"Architecte d'intérieur", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Fabrique d'Espace (Florence Quissolle)", adresse:"29 Rue Reinette", ville:"Bordeaux", cp:"33000", tel:"", site:"www.fabriquedespace.fr", type:"Architecte d'intérieur / Designer d'espace", zone:"Le Bouscat / Bordeaux" },
-{ nom:"BÔ M. Architecte d'Intérieur", adresse:"49 Rue Ferbeyre", ville:"Bordeaux", cp:"33200", tel:"06 51 18 38 81", site:"www.bo-m.fr", type:"Architecte d'intérieur", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Camille Aroldi", adresse:"1 Rue Belle Étoile", ville:"Bordeaux", cp:"33800", tel:"06 74 13 85 02", site:"www.camille-aroldi.com", type:"Architecte d'intérieur / Décoratrice", zone:"Le Bouscat / Bordeaux" },
-{ nom:"MH Interior (Nadine Durand)", adresse:"Bordeaux Nansouty", ville:"Bordeaux", cp:"33800", tel:"", site:"www.mh-interior.fr", type:"Architecte d'intérieur / Décoratrice", zone:"Le Bouscat / Bordeaux" },
-{ nom:"La Nouvelle Agence", adresse:"10 Quai de Brazza", ville:"Bordeaux", cp:"33100", tel:"", site:"", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Arthur Bonnet Bordeaux Centre", adresse:"33 Cours Georges Clémenceau", ville:"Bordeaux", cp:"33000", tel:"", site:"www.arthur-bonnet.com", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Ixina Bordeaux Lac", adresse:"2 Rue Duguay Trouin", ville:"Bordeaux", cp:"33000", tel:"05 56 38 38 86", site:"www.ixina.fr", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"SoCoo'c Bordeaux Le Lac", adresse:"Avenue des 40 Journaux", ville:"Bordeaux", cp:"33300", tel:"", site:"www.socooc.com", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Leroy Merlin Bordeaux Lac", adresse:"Centre Commercial Le Lac, Avenue des 40 Journaux", ville:"Bordeaux", cp:"33300", tel:"05 56 69 23 45", site:"www.leroymerlin.fr", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"IKEA Bordeaux", adresse:"40 Avenue des Quarante Journaux", ville:"Bordeaux", cp:"33300", tel:"", site:"www.ikea.com", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Ligne Roset / Docks Design", adresse:"4 Quai Richelieu", ville:"Bordeaux", cp:"33000", tel:"05 56 44 54 62", site:"www.ligne-roset.com", type:"Design / Décoration intérieure / Mobilier", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Cabinet BIEC", adresse:"21 bis Cours Pasteur", ville:"Bordeaux", cp:"33000", tel:"", site:"www.biec.fr", type:"Maître d'œuvre / Bureau d'études", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Nid Archi", adresse:"Pessac", ville:"Pessac", cp:"33600", tel:"", site:"", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Hybre Architecte", adresse:"Pessac", ville:"Pessac", cp:"33600", tel:"", site:"www.hybre-architecte.com", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Notes de Styles (Joy Clarens)", adresse:"Pessac", ville:"Pessac", cp:"33600", tel:"", site:"www.notesdestyles.com", type:"Architecte d'intérieur / Maître d'œuvre", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Agence AM5 (Anthony Gougnard)", adresse:"Gradignan", ville:"Gradignan", cp:"33170", tel:"", site:"", type:"Architecte d'intérieur / Décorateur", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Leroy Merlin Gradignan", adresse:"7 Avenue de l'Hippodrome", ville:"Gradignan", cp:"33170", tel:"", site:"www.leroymerlin.fr", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Studio Pépites", adresse:"Talence", ville:"Talence", cp:"33400", tel:"", site:"", type:"Architecte d'intérieur / Designer d'espace", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Frédéric Laffitte Architecte", adresse:"141 Avenue Montaigne", ville:"Saint-Médard-en-Jalles", cp:"33160", tel:"", site:"", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Architecte Blanquefort", adresse:"1 Rue François Mauriac", ville:"Blanquefort", cp:"33290", tel:"06 76 92 40 99", site:"", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Architecte Eysines", adresse:"Bât D La Gravade, 144 Avenue du Médoc", ville:"Eysines", cp:"33320", tel:"06 60 19 05 84", site:"", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Mobalpa Bordeaux Sainte-Eulalie", adresse:"Sainte-Eulalie", ville:"Sainte-Eulalie", cp:"33560", tel:"05 35 37 67 67", site:"www.mobalpa.fr", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
-{ nom:"Quartier Cuisine", adresse:"Bordeaux", ville:"Bordeaux", cp:"33000", tel:"", site:"", type:"Agenceur cuisines / dressings / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Atelier d'Architecture Baobab", adresse:"63 Avenue de la Libération Charles de Gaulle", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Atelier 41", adresse:"35 Rue Jules Ferry", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
+{ nom:"B2D Architectes", adresse:"44 Rue de Caudéran", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
+{ nom:"OS'Design", adresse:"12 Rue Jean Mermoz", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Cabinet d'architecture / Design", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Archi 14", adresse:"118 Rue des Écus", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Archi'Demain", adresse:"9 Rue du Commandant Charcot", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Guillaud François Architecte", adresse:"93 Rue du Professeur Arnozan", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Peyrefitte Philippe Architecte", adresse:"25 Rue Voltaire", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Denis Lecat Architecte", adresse:"41 Rue des Écus", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Baillon Laurent Architecte", adresse:"285 Avenue d'Eysines", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Adeline Maury Architecte", adresse:"203 Avenue Président Robert Schuman, Bât. B", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
+{ nom:"BZA Boris Zielinski Architecte", adresse:"75 Rue Max Coyne", ville:"Le Bouscat", cp:"33110", tel:"", site:"", email:"", distanceRef:"0km de Le Bouscat", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Soul Sens Architecture (Soulsens)", adresse:"10 Rue Montesquieu", ville:"Le Bouscat", cp:"33110", tel:"06 71 60 11 18", site:"www.soulsens.com", email:"contact@soulsens.com", distanceRef:"0km de Le Bouscat", type:"Architecte d'intérieur / Designer d'espace", zone:"Le Bouscat / Bordeaux" },
+{ nom:"JEGU Housing Concept", adresse:"8 Rue Louis Jouvet", ville:"Le Bouscat", cp:"33110", tel:"", site:"www.jeguhousingconcept.fr", email:"contact@jeguhousingconcept.fr", distanceRef:"0km de Le Bouscat", type:"Architecte d'intérieur / Designer d'espace", zone:"Le Bouscat / Bordeaux" },
+{ nom:"EVEN BTP", adresse:"126 Rue Laharpe", ville:"Le Bouscat", cp:"33110", tel:"05 56 42 62 05", site:"www.even-btp.fr", email:"contact@even-btp.fr", distanceRef:"0km de Le Bouscat", type:"Bureau d'études / Maître d'œuvre", zone:"Le Bouscat / Bordeaux" },
+{ nom:"DBN Architectes", adresse:"5 Rue des Vignobles", ville:"Mérignac", cp:"33700", tel:"05 40 01 96 23", site:"", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Concept-Déco Bordeaux (Filiz Erikci)", adresse:"2 Rue Marbotin", ville:"Mérignac", cp:"33700", tel:"06 81 62 81 67", site:"www.concept-deco-bordeaux.fr", email:"contact@concept-deco-bordeaux.fr", distanceRef:"5km, 10min de Le Bouscat", type:"Architecte d'intérieur / Décoratrice", zone:"Le Bouscat / Bordeaux" },
+{ nom:"L'Atelier D. (Nathalie Bourgoint)", adresse:"Mérignac", ville:"Mérignac", cp:"33700", tel:"05 32 00 21 54", site:"www.agence-latelierd.fr", email:"contact@agence-latelierd.fr", distanceRef:"5km, 10min de Le Bouscat", type:"Architecte d'intérieur", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Cotrabat", adresse:"18 Avenue de la Somme", ville:"Mérignac", cp:"33700", tel:"06 20 38 62 39", site:"www.cotrabat.fr", email:"contact@cotrabat.fr", distanceRef:"5km, 10min de Le Bouscat", type:"Maître d'œuvre", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Schmidt Mérignac", adresse:"24 Avenue du Meilleur Ouvrier de France", ville:"Mérignac", cp:"33700", tel:"05 56 13 18 93", site:"www.home-design.schmidt", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Cuisinella Mérignac", adresse:"7 Rue Euclide", ville:"Mérignac", cp:"33700", tel:"05 56 10 51 75", site:"www.ma.cuisinella", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Mobalpa Bordeaux Mérignac", adresse:"14 Rue Georges Ohm, ZAC Chemin Long", ville:"Mérignac", cp:"33700", tel:"05 35 37 67 67", site:"www.mobalpa.fr", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Ixina Bordeaux Mérignac", adresse:"59 Avenue Henri Vigneau", ville:"Mérignac", cp:"33700", tel:"05 56 42 01 35", site:"www.ixina.fr", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Arthur Bonnet Bordeaux Mérignac", adresse:"208 Avenue de la Marne", ville:"Mérignac", cp:"33700", tel:"", site:"www.arthur-bonnet.com", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Cuisines Références Mérignac", adresse:"8 Rue Albert Einstein", ville:"Mérignac", cp:"33700", tel:"05 57 81 05 45", site:"www.cuisines-references.fr", email:"contact@cuisines-references.fr", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Inova Cuisine Mérignac", adresse:"22 Rue Albert Einstein", ville:"Mérignac", cp:"33700", tel:"05 40 45 28 28", site:"www.inova-cuisine.fr", email:"contact@inova-cuisine.fr", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Roche Bobois Mérignac", adresse:"24 Avenue Jean Perrin, Village du Meuble", ville:"Mérignac", cp:"33700", tel:"05 56 34 23 98", site:"www.roche-bobois.com", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Design / Décoration intérieure / Mobilier haut de gamme", zone:"Le Bouscat / Bordeaux" },
+{ nom:"SoCoo'c Bordeaux Mérignac", adresse:"Mérignac", ville:"Mérignac", cp:"33700", tel:"", site:"www.socooc.com", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Leroy Merlin Mérignac", adresse:"90 Avenue Henri Vigneau", ville:"Mérignac", cp:"33693", tel:"", site:"www.leroymerlin.fr", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"ABRSO", adresse:"Bassens", ville:"Bassens", cp:"33530", tel:"05 56 38 41 50", site:"www.abrso.fr", email:"contact@abrso.fr", distanceRef:"12km, 15min de Le Bouscat", type:"Agenceur / Aménagement intérieur", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Archiconstruction", adresse:"Bordeaux", ville:"Bordeaux", cp:"33000", tel:"06 20 38 62 39", site:"www.archiconstruction.fr", email:"contact@archiconstruction.fr", distanceRef:"5km, 8min de Le Bouscat", type:"Maître d'œuvre", zone:"Le Bouscat / Bordeaux" },
+{ nom:"STUDIOPLANO", adresse:"Bordeaux", ville:"Bordeaux", cp:"33000", tel:"", site:"www.studioplano.fr", email:"contact@studioplano.fr", distanceRef:"5km, 8min de Le Bouscat", type:"Scénographe / Architecte d'intérieur / Designer", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Au Long Cours", adresse:"21 Avenue Jeanne d'Arc", ville:"Bordeaux", cp:"33000", tel:"09 81 46 18 70", site:"www.aulongcours.com", email:"contact@aulongcours.com", distanceRef:"5km, 8min de Le Bouscat", type:"Designer d'espace / Scénographe", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Imagineur d'Espaces", adresse:"Hangar 15, Quai des Chartrons", ville:"Bordeaux", cp:"33300", tel:"06 77 60 87 80", site:"www.imagineurdespaces.com", email:"contact@imagineurdespaces.com", distanceRef:"3km, 7min de Le Bouscat", type:"Architecte d'intérieur / Designer d'espace", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Crème Studio", adresse:"39 Cours de la Martinique", ville:"Bordeaux", cp:"33000", tel:"", site:"www.creme-studio.fr", email:"contact@creme-studio.fr", distanceRef:"5km, 8min de Le Bouscat", type:"Architecte d'intérieur", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Fabrique d'Espace (Florence Quissolle)", adresse:"29 Rue Reinette", ville:"Bordeaux", cp:"33000", tel:"", site:"www.fabriquedespace.fr", email:"contact@fabriquedespace.fr", distanceRef:"5km, 8min de Le Bouscat", type:"Architecte d'intérieur / Designer d'espace", zone:"Le Bouscat / Bordeaux" },
+{ nom:"BÔ M. Architecte d'Intérieur", adresse:"49 Rue Ferbeyre", ville:"Bordeaux", cp:"33200", tel:"06 51 18 38 81", site:"www.bo-m.fr", email:"contact@bo-m.fr", distanceRef:"5km, 8min de Le Bouscat", type:"Architecte d'intérieur", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Camille Aroldi", adresse:"1 Rue Belle Étoile", ville:"Bordeaux", cp:"33800", tel:"06 74 13 85 02", site:"www.camille-aroldi.com", email:"contact@camille-aroldi.com", distanceRef:"7km, 12min de Le Bouscat", type:"Architecte d'intérieur / Décoratrice", zone:"Le Bouscat / Bordeaux" },
+{ nom:"MH Interior (Nadine Durand)", adresse:"Bordeaux Nansouty", ville:"Bordeaux", cp:"33800", tel:"", site:"www.mh-interior.fr", email:"contact@mh-interior.fr", distanceRef:"7km, 12min de Le Bouscat", type:"Architecte d'intérieur / Décoratrice", zone:"Le Bouscat / Bordeaux" },
+{ nom:"La Nouvelle Agence", adresse:"10 Quai de Brazza", ville:"Bordeaux", cp:"33100", tel:"", site:"", email:"", distanceRef:"5km, 8min de Le Bouscat", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Arthur Bonnet Bordeaux Centre", adresse:"33 Cours Georges Clémenceau", ville:"Bordeaux", cp:"33000", tel:"", site:"www.arthur-bonnet.com", email:"", distanceRef:"5km, 8min de Le Bouscat", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Ixina Bordeaux Lac", adresse:"2 Rue Duguay Trouin", ville:"Bordeaux", cp:"33000", tel:"05 56 38 38 86", site:"www.ixina.fr", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"SoCoo'c Bordeaux Le Lac", adresse:"Avenue des 40 Journaux", ville:"Bordeaux", cp:"33300", tel:"", site:"www.socooc.com", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Leroy Merlin Bordeaux Lac", adresse:"Centre Commercial Le Lac, Avenue des 40 Journaux", ville:"Bordeaux", cp:"33300", tel:"05 56 69 23 45", site:"www.leroymerlin.fr", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"IKEA Bordeaux", adresse:"40 Avenue des Quarante Journaux", ville:"Bordeaux", cp:"33300", tel:"", site:"www.ikea.com", email:"", distanceRef:"5km, 10min de Le Bouscat", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Ligne Roset / Docks Design", adresse:"4 Quai Richelieu", ville:"Bordeaux", cp:"33000", tel:"05 56 44 54 62", site:"www.ligne-roset.com", email:"", distanceRef:"5km, 8min de Le Bouscat", type:"Design / Décoration intérieure / Mobilier", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Cabinet BIEC", adresse:"21 bis Cours Pasteur", ville:"Bordeaux", cp:"33000", tel:"", site:"www.biec.fr", email:"contact@biec.fr", distanceRef:"5km, 8min de Le Bouscat", type:"Maître d'œuvre / Bureau d'études", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Nid Archi", adresse:"Pessac", ville:"Pessac", cp:"33600", tel:"", site:"", email:"", distanceRef:"13km, 20min de Le Bouscat", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Hybre Architecte", adresse:"Pessac", ville:"Pessac", cp:"33600", tel:"", site:"www.hybre-architecte.com", email:"contact@hybre-architecte.com", distanceRef:"13km, 20min de Le Bouscat", type:"Cabinet d'architecture", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Notes de Styles (Joy Clarens)", adresse:"Pessac", ville:"Pessac", cp:"33600", tel:"", site:"www.notesdestyles.com", email:"contact@notesdestyles.com", distanceRef:"13km, 20min de Le Bouscat", type:"Architecte d'intérieur / Maître d'œuvre", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Agence AM5 (Anthony Gougnard)", adresse:"Gradignan", ville:"Gradignan", cp:"33170", tel:"", site:"", email:"", distanceRef:"18km, 25min de Le Bouscat", type:"Architecte d'intérieur / Décorateur", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Leroy Merlin Gradignan", adresse:"7 Avenue de l'Hippodrome", ville:"Gradignan", cp:"33170", tel:"", site:"www.leroymerlin.fr", email:"", distanceRef:"18km, 25min de Le Bouscat", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Studio Pépites", adresse:"Talence", ville:"Talence", cp:"33400", tel:"", site:"", email:"", distanceRef:"14km, 20min de Le Bouscat", type:"Architecte d'intérieur / Designer d'espace", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Frédéric Laffitte Architecte", adresse:"141 Avenue Montaigne", ville:"Saint-Médard-en-Jalles", cp:"33160", tel:"", site:"", email:"", distanceRef:"13km, 18min de Le Bouscat", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Architecte Blanquefort", adresse:"1 Rue François Mauriac", ville:"Blanquefort", cp:"33290", tel:"06 76 92 40 99", site:"", email:"", distanceRef:"9km, 15min de Le Bouscat", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Architecte Eysines", adresse:"Bât D La Gravade, 144 Avenue du Médoc", ville:"Eysines", cp:"33320", tel:"06 60 19 05 84", site:"", email:"", distanceRef:"4km, 8min de Le Bouscat", type:"Architecte", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Mobalpa Bordeaux Sainte-Eulalie", adresse:"Sainte-Eulalie", ville:"Sainte-Eulalie", cp:"33560", tel:"05 35 37 67 67", site:"www.mobalpa.fr", email:"", distanceRef:"16km, 22min de Le Bouscat", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
+{ nom:"Quartier Cuisine", adresse:"Bordeaux", ville:"Bordeaux", cp:"33000", tel:"", site:"", email:"", distanceRef:"5km, 8min de Le Bouscat", type:"Agenceur cuisines / dressings / salles de bain (concepteur-vendeur)", zone:"Le Bouscat / Bordeaux" },
 
 // ─── LIBOURNE ────────────────────────────────────────────────────────────
-{ nom:"Epure Studio (Guillaume Cariou)", adresse:"1 Avenue Georges Pompidou", ville:"Libourne", cp:"33500", tel:"05 57 51 01 83", site:"epurestudio.fr", type:"Cabinet d'architecture & maîtrise d'oeuvre", zone:"Libourne" },
-{ nom:"BYAA – Arnaud Architectes", adresse:"15 Rue Montesquieu", ville:"Libourne", cp:"33500", tel:"05 57 51 15 95", site:"byaa.fr", type:"Cabinet d'architecture", zone:"Libourne" },
-{ nom:"BYAA Inside", adresse:"15 Rue Montesquieu", ville:"Libourne", cp:"33500", tel:"05 57 51 15 95", site:"byaa-inside.fr", type:"Architecte d'intérieur / designer d'espace", zone:"Libourne" },
-{ nom:"ACTION ARCHI Arnaud Architectes Associés", adresse:"20 Rue Gambetta", ville:"Libourne", cp:"33500", tel:"05 57 51 15 95", site:"www.actionarchi.fr", type:"Cabinet d'architecture", zone:"Libourne" },
-{ nom:"Cordier Architecture (Jean-Daniel Cordier)", adresse:"19 Cours Tourny", ville:"Libourne", cp:"33500", tel:"05 57 51 49 00", site:"cordier.archi", type:"Cabinet d'architecture", zone:"Libourne" },
-{ nom:"Natacha Jolivet Hacquard Architecte", adresse:"49 Rue Montesquieu", ville:"Libourne", cp:"33500", tel:"05 57 51 61 40", site:"natachajolivetarchitecte.fr", type:"Cabinet d'architecture", zone:"Libourne" },
-{ nom:"AG-Architectures (Anaïs Gretter)", adresse:"61 Rue de Montaudon", ville:"Libourne", cp:"33500", tel:"", site:"www.ag-architectures.com", type:"Cabinet d'architecture", zone:"Libourne" },
-{ nom:"Ideat Engineering", adresse:"71 Rue de la Marne", ville:"Libourne", cp:"33500", tel:"05 57 25 38 94", site:"ideat-eng.fr", type:"Architecte d'intérieur / conception intérieure", zone:"Libourne" },
-{ nom:"Global Concept Décoration", adresse:"29 Rue Montaudon", ville:"Libourne", cp:"33500", tel:"", site:"globalconceptdecoration.com", type:"Décorateur intérieur / architecte d'intérieur", zone:"Libourne" },
-{ nom:"BE.Control", adresse:"26 bis Avenue Georges Pompidou", ville:"Libourne", cp:"33500", tel:"05 16 57 00 00", site:"www.be-control.fr", type:"Bureau d'études / maîtrise d'oeuvre", zone:"Libourne" },
-{ nom:"MOD Coordination", adresse:"42 Rue Victor Hugo", ville:"Libourne", cp:"33500", tel:"06 72 73 83 84", site:"modcoordination.fr", type:"Maître d'oeuvre en bâtiment", zone:"Libourne" },
-{ nom:"Schmidt Libourne", adresse:"93 Avenue du Général de Gaulle", ville:"Libourne", cp:"33500", tel:"05 57 50 51 92", site:"www.home-design.schmidt", type:"Agenceur cuisines / salles de bain / dressing (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"Cuisinella Herchan Concept & Design", adresse:"102 Avenue du Général de Gaulle", ville:"Libourne", cp:"33500", tel:"05 57 84 85 85", site:"www.ma.cuisinella", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"SoCoo'c Libourne", adresse:"Avenue du Général de Gaulle, Zone commerciale du Verdet", ville:"Libourne", cp:"33500", tel:"05 57 55 12 80", site:"www.socooc.com", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"Perene Libourne", adresse:"187 Avenue Maréchal Foch", ville:"Libourne", cp:"33500", tel:"05 57 51 24 24", site:"www.perene.fr", type:"Agenceur cuisines / salles de bain / dressing (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"Cuisines AvivA Libourne", adresse:"164 Avenue Clément Fayat", ville:"Libourne", cp:"33500", tel:"05 33 09 66 77", site:"www.cuisines-aviva.com", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"Cuisines Références Libourne", adresse:"157 Avenue du Général de Gaulle", ville:"Libourne", cp:"33500", tel:"05 57 51 69 20", site:"www.cuisines-references.fr", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"Euro Cuisine Libourne", adresse:"Libourne", ville:"Libourne", cp:"33500", tel:"05 40 24 64 07", site:"www.eurocuisine.fr", type:"Cuisiniste / agenceur salle de bain (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"Home Design Création Libourne", adresse:"181 Avenue Georges Pompidou", ville:"Libourne", cp:"33500", tel:"05 57 41 92 09", site:"homedesigncreation33.fr", type:"Cuisiniste / agenceur intérieur (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"Éric Castagnotto Architecte DPLG", adresse:"13 Route de Lussac", ville:"Montagne", cp:"33570", tel:"05 57 74 57 81", site:"www.castagnotto.com", type:"Cabinet d'architecture", zone:"Libourne" },
-{ nom:"Mickaël Hébert Architecte", adresse:"10 Grand Rue", ville:"Montagne", cp:"33570", tel:"09 70 66 15 89", site:"www.mh-architecte.fr", type:"Cabinet d'architecture", zone:"Libourne" },
-{ nom:"Marina Rocher-Lagarde (Architecte d'intérieur CFAI)", adresse:"3 Rue du Tilleul", ville:"Montagne", cp:"33570", tel:"05 57 24 83 79", site:"www.marinarocherlagarde.com", type:"Architecte d'intérieur / maître d'oeuvre", zone:"Libourne" },
-{ nom:"Caroline Ancellin Architecte d'intérieur", adresse:"2 Chemin de Laumure", ville:"Montagne", cp:"33570", tel:"06 78 95 79 26", site:"www.architecte-interieur-libourne.com", type:"Architecte d'intérieur / décorateur", zone:"Libourne" },
-{ nom:"Le Clos Studio (Cécile Dupré)", adresse:"Abzac", ville:"Abzac", cp:"33230", tel:"", site:"leclosstudio.fr", type:"Cabinet d'architecture (rénovation pierre, viticole)", zone:"Libourne" },
-{ nom:"Harmonies d'Intérieurs (Claire Gilbert)", adresse:"53 B Route de Creon", ville:"Camarsac", cp:"33750", tel:"", site:"www.harmoniesdinterieurs.fr", type:"Architecte d'intérieur / mobilier sur-mesure", zone:"Libourne" },
-{ nom:"MarieB Interieur (Marie Bidjang)", adresse:"Avenue Charles de Gaulle", ville:"Sainte-Terre", cp:"33350", tel:"06 46 55 43 18", site:"www.marieb-interieur.fr", type:"Architecte d'intérieur / optimisation espace", zone:"Libourne" },
-{ nom:"Luminessence Architecture d'intérieur", adresse:"10 Rue George Sand", ville:"Saint-Denis-de-Pile", cp:"33910", tel:"", site:"www.luminessence-architecture-interieur.com", type:"Architecte d'intérieur / designer d'espace", zone:"Libourne" },
-{ nom:"ACR Cuisines Combettes", adresse:"7 ZA Barry Sud", ville:"Saint-Seurin-sur-l'Isle", cp:"33660", tel:"05 57 49 67 40", site:"www.cuisinescombettes.fr", type:"Cuisiniste / agenceur sur-mesure (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"Metrogram Architecture", adresse:"4 Rue Emile Dantagnan", ville:"Saint-André-de-Cubzac", cp:"33240", tel:"05 40 10 81 13", site:"www.metrogram.archi", type:"Cabinet d'architecture", zone:"Libourne" },
-{ nom:"Home Design Création Saint-André-de-Cubzac", adresse:"285 Rue Nationale", ville:"Saint-André-de-Cubzac", cp:"33240", tel:"05 57 43 28 31", site:"homedesigncreation33.fr", type:"Cuisiniste / agenceur intérieur (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"Cuisiligne", adresse:"Saint-Sulpice-et-Cameyrac", ville:"Saint-Sulpice-et-Cameyrac", cp:"33450", tel:"05 57 99 91 30", site:"www.cuisiligne.com", type:"Agenceur cuisines / salles de bain / dressing (concepteur-vendeur)", zone:"Libourne" },
-{ nom:"La Maison M", adresse:"Libourne", ville:"Libourne", cp:"33500", tel:"", site:"www.lamaisonm.com", type:"Décorateur intérieur / architecture d'intérieur", zone:"Libourne" },
+{ nom:"Epure Studio (Guillaume Cariou)", adresse:"1 Avenue Georges Pompidou", ville:"Libourne", cp:"33500", tel:"05 57 51 01 83", site:"epurestudio.fr", email:"contact@epurestudio.fr", distanceRef:"0km de Libourne", type:"Cabinet d'architecture & maîtrise d'oeuvre", zone:"Libourne" },
+{ nom:"BYAA – Arnaud Architectes", adresse:"15 Rue Montesquieu", ville:"Libourne", cp:"33500", tel:"05 57 51 15 95", site:"byaa.fr", email:"contact@byaa-ingenierie.fr", distanceRef:"0km de Libourne", type:"Cabinet d'architecture", zone:"Libourne" },
+{ nom:"BYAA Inside", adresse:"15 Rue Montesquieu", ville:"Libourne", cp:"33500", tel:"05 57 51 15 95", site:"byaa-inside.fr", email:"contact@byaa-inside.fr", distanceRef:"0km de Libourne", type:"Architecte d'intérieur / designer d'espace", zone:"Libourne" },
+{ nom:"ACTION ARCHI Arnaud Architectes Associés", adresse:"20 Rue Gambetta", ville:"Libourne", cp:"33500", tel:"05 57 51 15 95", site:"www.actionarchi.fr", email:"contact@actionarchi.fr", distanceRef:"0km de Libourne", type:"Cabinet d'architecture", zone:"Libourne" },
+{ nom:"Cordier Architecture (Jean-Daniel Cordier)", adresse:"19 Cours Tourny", ville:"Libourne", cp:"33500", tel:"05 57 51 49 00", site:"cordier.archi", email:"agence@cordier.archi", distanceRef:"0km de Libourne", type:"Cabinet d'architecture", zone:"Libourne" },
+{ nom:"Natacha Jolivet Hacquard Architecte", adresse:"49 Rue Montesquieu", ville:"Libourne", cp:"33500", tel:"05 57 51 61 40", site:"natachajolivetarchitecte.fr", email:"lagence.natacha@gmail.com", distanceRef:"0km de Libourne", type:"Cabinet d'architecture", zone:"Libourne" },
+{ nom:"AG-Architectures (Anaïs Gretter)", adresse:"61 Rue de Montaudon", ville:"Libourne", cp:"33500", tel:"", site:"www.ag-architectures.com", email:"contact@ag-ms.fr", distanceRef:"0km de Libourne", type:"Cabinet d'architecture", zone:"Libourne" },
+{ nom:"Ideat Engineering", adresse:"71 Rue de la Marne", ville:"Libourne", cp:"33500", tel:"05 57 25 38 94", site:"ideat-eng.fr", email:"ideat.eng@wanadoo.fr", distanceRef:"0km de Libourne", type:"Architecte d'intérieur / conception intérieure", zone:"Libourne" },
+{ nom:"Global Concept Décoration", adresse:"29 Rue Montaudon", ville:"Libourne", cp:"33500", tel:"", site:"globalconceptdecoration.com", email:"contact@globalconceptdecoration.com", distanceRef:"0km de Libourne", type:"Décorateur intérieur / architecte d'intérieur", zone:"Libourne" },
+{ nom:"BE.Control", adresse:"26 bis Avenue Georges Pompidou", ville:"Libourne", cp:"33500", tel:"05 16 57 00 00", site:"www.be-control.fr", email:"contact@be-control.fr", distanceRef:"0km de Libourne", type:"Bureau d'études / maîtrise d'oeuvre", zone:"Libourne" },
+{ nom:"MOD Coordination", adresse:"42 Rue Victor Hugo", ville:"Libourne", cp:"33500", tel:"06 72 73 83 84", site:"modcoordination.fr", email:"mod.coordination@orange.fr", distanceRef:"0km de Libourne", type:"Maître d'oeuvre en bâtiment", zone:"Libourne" },
+{ nom:"Schmidt Libourne", adresse:"93 Avenue du Général de Gaulle", ville:"Libourne", cp:"33500", tel:"05 57 50 51 92", site:"www.home-design.schmidt", email:"caroline.b@schmidt-libourne.fr", distanceRef:"0km de Libourne", type:"Agenceur cuisines / salles de bain / dressing (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"Cuisinella Herchan Concept & Design", adresse:"102 Avenue du Général de Gaulle", ville:"Libourne", cp:"33500", tel:"05 57 84 85 85", site:"www.ma.cuisinella", email:"", distanceRef:"0km de Libourne", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"SoCoo'c Libourne", adresse:"Avenue du Général de Gaulle, Zone commerciale du Verdet", ville:"Libourne", cp:"33500", tel:"05 57 55 12 80", site:"www.socooc.com", email:"", distanceRef:"0km de Libourne", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"Perene Libourne", adresse:"187 Avenue Maréchal Foch", ville:"Libourne", cp:"33500", tel:"05 57 51 24 24", site:"www.perene.fr", email:"contact@perene.fr", distanceRef:"0km de Libourne", type:"Agenceur cuisines / salles de bain / dressing (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"Cuisines AvivA Libourne", adresse:"164 Avenue Clément Fayat", ville:"Libourne", cp:"33500", tel:"05 33 09 66 77", site:"www.cuisines-aviva.com", email:"", distanceRef:"0km de Libourne", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"Cuisines Références Libourne", adresse:"157 Avenue du Général de Gaulle", ville:"Libourne", cp:"33500", tel:"05 57 51 69 20", site:"www.cuisines-references.fr", email:"contact@cuisines-references.fr", distanceRef:"0km de Libourne", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"Euro Cuisine Libourne", adresse:"Libourne", ville:"Libourne", cp:"33500", tel:"05 40 24 64 07", site:"www.eurocuisine.fr", email:"", distanceRef:"0km de Libourne", type:"Cuisiniste / agenceur salle de bain (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"Home Design Création Libourne", adresse:"181 Avenue Georges Pompidou", ville:"Libourne", cp:"33500", tel:"05 57 41 92 09", site:"homedesigncreation33.fr", email:"homedesigncreation33@gmail.com", distanceRef:"0km de Libourne", type:"Cuisiniste / agenceur intérieur (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"LM Cuisines 33", adresse:"Route de Bordeaux", ville:"Saint-André-de-Cubzac", cp:"33240", tel:"", site:"www.lmcuisines.com", email:"contact@lmcuisines.com", distanceRef:"8km, 12min de Libourne", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"Éric Castagnotto Architecte DPLG", adresse:"13 Route de Lussac", ville:"Montagne", cp:"33570", tel:"05 57 74 57 81", site:"www.castagnotto.com", email:"contact@castagnotto.com", distanceRef:"7km, 10min de Libourne", type:"Cabinet d'architecture", zone:"Libourne" },
+{ nom:"Mickaël Hébert Architecte", adresse:"10 Grand Rue", ville:"Montagne", cp:"33570", tel:"09 70 66 15 89", site:"www.mh-architecte.fr", email:"contact@mh-architecte.fr", distanceRef:"7km, 10min de Libourne", type:"Cabinet d'architecture", zone:"Libourne" },
+{ nom:"Marina Rocher-Lagarde (Architecte d'intérieur CFAI)", adresse:"3 Rue du Tilleul", ville:"Montagne", cp:"33570", tel:"05 57 24 83 79", site:"www.marinarocherlagarde.com", email:"contact@marinarocherlagarde.com", distanceRef:"7km, 10min de Libourne", type:"Architecte d'intérieur / maître d'oeuvre", zone:"Libourne" },
+{ nom:"Caroline Ancellin Architecte d'intérieur", adresse:"2 Chemin de Laumure", ville:"Montagne", cp:"33570", tel:"06 78 95 79 26", site:"www.architecte-interieur-libourne.com", email:"contact@architecte-interieur-libourne.com", distanceRef:"7km, 10min de Libourne", type:"Architecte d'intérieur / décorateur", zone:"Libourne" },
+{ nom:"Le Clos Studio (Cécile Dupré)", adresse:"Abzac", ville:"Abzac", cp:"33230", tel:"", site:"leclosstudio.fr", email:"contact@leclosstudio.fr", distanceRef:"18km, 20min de Libourne", type:"Cabinet d'architecture (rénovation pierre, viticole)", zone:"Libourne" },
+{ nom:"Harmonies d'Intérieurs (Claire Gilbert)", adresse:"53 B Route de Creon", ville:"Camarsac", cp:"33750", tel:"", site:"www.harmoniesdinterieurs.fr", email:"harmoniesdinterieurs@gmail.com", distanceRef:"20km, 22min de Libourne", type:"Architecte d'intérieur / mobilier sur-mesure", zone:"Libourne" },
+{ nom:"MarieB Interieur (Marie Bidjang)", adresse:"Avenue Charles de Gaulle", ville:"Sainte-Terre", cp:"33350", tel:"06 46 55 43 18", site:"www.marieb-interieur.fr", email:"marie.bidjang.interieur@gmail.com", distanceRef:"14km, 17min de Libourne", type:"Architecte d'intérieur / optimisation espace", zone:"Libourne" },
+{ nom:"Luminessence Architecture d'intérieur", adresse:"10 Rue George Sand", ville:"Saint-Denis-de-Pile", cp:"33910", tel:"", site:"www.luminessence-architecture-interieur.com", email:"infos.luminessence.ai@gmail.com", distanceRef:"4km, 6min de Libourne", type:"Architecte d'intérieur / designer d'espace", zone:"Libourne" },
+{ nom:"ACR Cuisines Combettes", adresse:"7 ZA Barry Sud", ville:"Saint-Seurin-sur-l'Isle", cp:"33660", tel:"05 57 49 67 40", site:"www.cuisinescombettes.fr", email:"contact@cuisinescombettes.fr", distanceRef:"17km, 20min de Libourne", type:"Cuisiniste / agenceur sur-mesure (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"Metrogram Architecture", adresse:"4 Rue Emile Dantagnan", ville:"Saint-André-de-Cubzac", cp:"33240", tel:"05 40 10 81 13", site:"www.metrogram.archi", email:"contact@metrogram-architecture.com", distanceRef:"20km, 20min de Libourne", type:"Cabinet d'architecture", zone:"Libourne" },
+{ nom:"Home Design Création Saint-André-de-Cubzac", adresse:"285 Rue Nationale", ville:"Saint-André-de-Cubzac", cp:"33240", tel:"05 57 43 28 31", site:"homedesigncreation33.fr", email:"homedesigncreation33@gmail.com", distanceRef:"20km, 20min de Libourne", type:"Cuisiniste / agenceur intérieur (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"Cuisiligne", adresse:"Saint-Sulpice-et-Cameyrac", ville:"Saint-Sulpice-et-Cameyrac", cp:"33450", tel:"05 57 99 91 30", site:"www.cuisiligne.com", email:"contact@cuisiligne.com", distanceRef:"15km, 18min de Libourne", type:"Agenceur cuisines / salles de bain / dressing (concepteur-vendeur)", zone:"Libourne" },
+{ nom:"La Maison M", adresse:"Libourne", ville:"Libourne", cp:"33500", tel:"", site:"www.lamaisonm.com", email:"contact@lamaisonm.com", distanceRef:"0km de Libourne", type:"Décorateur intérieur / architecture d'intérieur", zone:"Libourne" },
+{ nom:"Céline Lavigne Architecture d'intérieur", adresse:"Gironde (33)", ville:"Libourne", cp:"33500", tel:"", site:"www.celinelavigne.com", email:"contact@celinelavigne.com", distanceRef:"35km, 35min de Libourne", type:"Architecte d'intérieur / Designer d'espace", zone:"Libourne" },
 
 // ─── ANGOULÊME ───────────────────────────────────────────────────────────
-{ nom:"Atelier Cahuette", adresse:"24 Rue de la Corderie", ville:"Angoulême", cp:"16000", tel:"07 69 16 88 19", site:"atelier-cahuette.com", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Agence Gesson / Sophie Éliat Architectes", adresse:"15 Boulevard Poitou Charentes", ville:"Angoulême", cp:"16000", tel:"05 45 38 28 70", site:"agence-architecture-eliat.com", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Agence Danielle Briole Architectes", adresse:"8 Rue Jean Fougerat", ville:"Angoulême", cp:"16000", tel:"05 45 92 46 79", site:"", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Didier Penaud Architecture", adresse:"10 Rue Jean Fougerat", ville:"Angoulême", cp:"16000", tel:"05 45 92 34 99", site:"penaud-architecture.fr", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Mesnard & Brodeur Architectes", adresse:"85 Avenue du Président Wilson", ville:"Angoulême", cp:"16000", tel:"", site:"mesnardbrodeurarchitectes.com", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Alexandre Barbezieux Architecte", adresse:"16 Rempart Est, Bât. 2", ville:"Angoulême", cp:"16000", tel:"05 45 92 96 39", site:"alexandre-barbezieux-architecte.fr", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Olivier Gouedo Architecte", adresse:"143 Rue de Montmoreau", ville:"Angoulême", cp:"16000", tel:"09 77 76 17 20", site:"", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Yves Cohen Architecte", adresse:"92 Boulevard République", ville:"Angoulême", cp:"16000", tel:"05 45 95 33 70", site:"", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Frédérique Bua Architecte", adresse:"21 Rue Trois Notre Dame", ville:"Angoulême", cp:"16000", tel:"05 45 95 93 13", site:"", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Skala Architecture", adresse:"8 Boulevard Winston Churchill", ville:"Angoulême", cp:"16000", tel:"", site:"skala-architecture.fr", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Atelier Marguerite Architectes", adresse:"163 Avenue Gambetta", ville:"Angoulême", cp:"16000", tel:"", site:"margueritearchitectes.fr", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Hangar 21 Paysage & Architecture", adresse:"21 Rue Édouard Escalier", ville:"Angoulême", cp:"16000", tel:"", site:"", type:"Cabinet d'architecture / paysage", zone:"Angoulême" },
-{ nom:"Bruno Bejard Architecte", adresse:"81 Rue des Simes", ville:"L'Isle-d'Espagnac", cp:"16340", tel:"05 17 20 57 38", site:"", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Studio Gaillard Lucile", adresse:"163 Avenue Gambetta", ville:"Angoulême", cp:"16000", tel:"06 69 38 77 56", site:"studio-gaillard-lucile.fr", type:"Architecte d'intérieur / Designer d'espace", zone:"Angoulême" },
-{ nom:"Nathalie Manicot Architecte d'intérieur CFAI", adresse:"22 Rue Saint Antoine", ville:"Angoulême", cp:"16000", tel:"", site:"nathalie-manicot.com", type:"Architecte d'intérieur / Designer d'espace", zone:"Angoulême" },
-{ nom:"Sophie Proust Architecte d'intérieur", adresse:"15 Place des Halles", ville:"Angoulême", cp:"16000", tel:"", site:"sophie-proust.fr", type:"Architecte d'intérieur", zone:"Angoulême" },
-{ nom:"Anaïs Bouthinon Architecte d'intérieur", adresse:"Charente (16)", ville:"Angoulême", cp:"16000", tel:"", site:"bouthinon-architecture.com", type:"Architecte d'intérieur / Décoratrice", zone:"Angoulême" },
-{ nom:"MADE Architecture (Manon Desclaux)", adresse:"Angoulême", ville:"Angoulême", cp:"16000", tel:"", site:"made-architecture.fr", type:"Architecte d'intérieur / Designer", zone:"Angoulême" },
-{ nom:"Kaktus Concept", adresse:"17 Avenue du Maréchal Juin, Local 02", ville:"L'Isle-d'Espagnac", cp:"16340", tel:"", site:"", type:"Architecte d'intérieur / Agencement", zone:"Angoulême" },
-{ nom:"Laureline Chiarami Décoratrice", adresse:"15 Place des Halles", ville:"Angoulême", cp:"16000", tel:"", site:"decoratrice-angouleme.fr", type:"Décorateur d'intérieur", zone:"Angoulême" },
-{ nom:"SO-Interior (Marylène Boulard)", adresse:"Allée des Tilleuls", ville:"Saint-Yrieix-sur-Charente", cp:"16710", tel:"06 49 12 44 69", site:"so-interior.eu", type:"Décorateur d'intérieur / Scénographie événementielle", zone:"Angoulême" },
-{ nom:"L'Atelier Décor", adresse:"9 Rue d'Arcole", ville:"Angoulême", cp:"16000", tel:"05 45 95 55 40", site:"latelierdecor.com", type:"Décorateur d'intérieur / Peintre en décor", zone:"Angoulême" },
-{ nom:"Concept-Home 16", adresse:"Angoulême", ville:"Angoulême", cp:"16000", tel:"", site:"concept-home16.fr", type:"Décorateur d'intérieur / Rénovation", zone:"Angoulême" },
-{ nom:"Agence 5070 / Marielle Tesson", adresse:"Rue Montalembert", ville:"Sers", cp:"16410", tel:"05 45 25 38 24", site:"tesson-design.fr", type:"Architecte d'intérieur CFAI / Designer d'espace", zone:"Angoulême" },
-{ nom:"Agence Tag — Communication & Scénographie", adresse:"Angoulême", ville:"Angoulême", cp:"16000", tel:"", site:"agencetag-1.fr", type:"Scénographie / Design événementiel / Stands", zone:"Angoulême" },
-{ nom:"A-Ingénierie", adresse:"77 Boulevard de Bretagne", ville:"Angoulême", cp:"16000", tel:"05 86 75 00 35", site:"a-ingenierie.com", type:"Bureau d'études techniques bâtiment", zone:"Angoulême" },
-{ nom:"Levron Ingénierie", adresse:"197 Rue de Basseau", ville:"Angoulême", cp:"16000", tel:"09 77 06 20 12", site:"", type:"Bureau d'études / Maître d'œuvre", zone:"Angoulême" },
-{ nom:"Bureau d'Études Thermiques Charentais (BETC)", adresse:"16 Rempart de l'Est, Apt. 2", ville:"Angoulême", cp:"16000", tel:"06 71 13 75 31", site:"bureau-etudes-thermiques-charentais-16.fr", type:"Bureau d'études thermiques", zone:"Angoulême" },
-{ nom:"CHM Bâtiment", adresse:"Charente (16)", ville:"Angoulême", cp:"16000", tel:"", site:"chm-batiment.fr", type:"Maître d'œuvre / Construction-Rénovation", zone:"Angoulême" },
-{ nom:"CAUE Charente", adresse:"31 Boulevard Besson Bey", ville:"Angoulême", cp:"16000", tel:"", site:"", type:"Conseil en architecture et urbanisme", zone:"Angoulême" },
-{ nom:"Schmidt Champniers", adresse:"217 Rue de l'Auvent, ZAC des Montagnes", ville:"Champniers", cp:"16430", tel:"05 45 65 73 08", site:"home-design.schmidt", type:"Agenceur cuisines / salles de bains (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"SoCoo'c Angoulême-Soyaux", adresse:"250-252 Avenue du Général de Gaulle, Parc de la Jaufertie", ville:"Soyaux", cp:"16800", tel:"05 35 37 70 70", site:"socooc.com", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"Ecocuisine Angoulême", adresse:"ZA les Montagnes, 556 Rue de la Génoise", ville:"Champniers", cp:"16430", tel:"05 45 94 95 69", site:"ecocuisine.fr", type:"Agenceur cuisines / electroménager (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"Cuisine Plus Angoulême", adresse:"902 Rue de la Génoise", ville:"Champniers", cp:"16430", tel:"05 54 48 48 40", site:"cuisine-plus.fr", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"Cuisine 16", adresse:"58 Rue de l'Épargne, Zone Industrielle N°3", ville:"L'Isle-d'Espagnac", cp:"16340", tel:"05 45 22 99 43", site:"cuisine16.fr", type:"Agenceur cuisines / dressings (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"Cuisines Références Angoulême", adresse:"396 Rue de Bordeaux", ville:"Angoulême", cp:"16000", tel:"09 83 61 60 48", site:"cuisines-references.fr", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"Cuisines et Vous Angoulême", adresse:"18 Rue Jean Charcot", ville:"Angoulême", cp:"16000", tel:"05 45 90 06 78", site:"", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"Cuisimeuble", adresse:"35 Avenue de Barbezieux", ville:"Châteaubernard", cp:"16100", tel:"05 45 82 34 32", site:"cuisimeuble.fr", type:"Agenceur cuisines / salles de bains / dressings", zone:"Angoulême" },
-{ nom:"Schmidt Cognac-Châteaubernard", adresse:"25 Avenue d'Angoulême, Parc des Vauzelles", ville:"Châteaubernard", cp:"16100", tel:"05 45 83 83 40", site:"home-design.schmidt", type:"Agenceur cuisines / salles de bains (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"Mobalpa Cognac", adresse:"169 Avenue Victor Hugo", ville:"Cognac", cp:"16100", tel:"05 35 37 00 27", site:"mobalpa.fr", type:"Agenceur cuisines / salles de bains (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"SoCoo'c Châteaubernard", adresse:"Centre Commercial Auchan, 40 Rue de l'Anisserie", ville:"Châteaubernard", cp:"16100", tel:"05 35 37 00 45", site:"socooc.com", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"Ecocuisine Cognac", adresse:"Parc Commercial de la Trache, Route d'Angoulême", ville:"Châteaubernard", cp:"16100", tel:"05 45 82 86 40", site:"ecocuisine.fr", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"Coté Cuisine Cognac", adresse:"ZC La Trache, Avenue d'Angoulême", ville:"Châteaubernard", cp:"16100", tel:"09 63 04 51 83", site:"cotecuisine-cognac.fr", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"DB Cuisine Cognac", adresse:"89 Boulevard Denfert Rochereau", ville:"Cognac", cp:"16100", tel:"05 16 45 41 99", site:"", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
-{ nom:"Cuisines Gratacos", adresse:"49 Rue de la Grue", ville:"Gensac-la-Pallue", cp:"16130", tel:"05 45 32 15 63", site:"", type:"Agenceur cuisines / salles de bains", zone:"Angoulême" },
-{ nom:"Gaël Pernot Architecte", adresse:"45 Rue Aristide Briand", ville:"Cognac", cp:"16100", tel:"", site:"", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Éric Daigre Architecte DPLG", adresse:"37 Place François 1er", ville:"Cognac", cp:"16100", tel:"", site:"darchitectures.com", type:"Cabinet d'architecture / Bureau d'études", zone:"Angoulême" },
-{ nom:"Hubert Bonfils Architecture", adresse:"10 Rue Élisée Mousnier", ville:"Cognac", cp:"16100", tel:"", site:"", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"M Architecture", adresse:"21 Rue Prévost de Sansac", ville:"Cognac", cp:"16100", tel:"", site:"", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"Cabinet Vuong Architecte DPLG", adresse:"65 B Rue de la Groie", ville:"Cognac", cp:"16100", tel:"", site:"", type:"Cabinet d'architecture", zone:"Angoulême" },
-{ nom:"BCAID Maîtrise d'Œuvre (Benjamin Chalifour)", adresse:"97 Rue Aristide Briand", ville:"Cognac", cp:"16100", tel:"", site:"", type:"Maître d'œuvre / Architecte d'intérieur", zone:"Angoulême" },
-{ nom:"Karine Meire Architecte d'intérieur", adresse:"28 Rue de Segonzac", ville:"Cognac", cp:"16100", tel:"", site:"karine-meire-archi.fr", type:"Architecte d'intérieur / Maître d'œuvre", zone:"Angoulême" },
+{ nom:"Atelier Cahuette", adresse:"24 Rue de la Corderie", ville:"Angoulême", cp:"16000", tel:"07 69 16 88 19", site:"atelier-cahuette.com", email:"contact@atelier-cahuette.com", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Agence Gesson / Sophie Éliat Architectes", adresse:"15 Boulevard Poitou Charentes", ville:"Angoulême", cp:"16000", tel:"05 45 38 28 70", site:"agence-architecture-eliat.com", email:"contact@agence-architecture-eliat.com", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Agence Danielle Briole Architectes", adresse:"8 Rue Jean Fougerat", ville:"Angoulême", cp:"16000", tel:"05 45 92 46 79", site:"", email:"", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Didier Penaud Architecture", adresse:"10 Rue Jean Fougerat", ville:"Angoulême", cp:"16000", tel:"05 45 92 34 99", site:"penaud-architecture.fr", email:"contact@penaud-architecture.fr", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Mesnard & Brodeur Architectes", adresse:"85 Avenue du Président Wilson", ville:"Angoulême", cp:"16000", tel:"", site:"mesnardbrodeurarchitectes.com", email:"contact@mesnardbrodeurarchitectes.com", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Alexandre Barbezieux Architecte", adresse:"16 Rempart Est, Bât. 2", ville:"Angoulême", cp:"16000", tel:"05 45 92 96 39", site:"alexandre-barbezieux-architecte.fr", email:"contact@alexandre-barbezieux-architecte.fr", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Olivier Gouedo Architecte", adresse:"143 Rue de Montmoreau", ville:"Angoulême", cp:"16000", tel:"09 77 76 17 20", site:"", email:"", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Yves Cohen Architecte", adresse:"92 Boulevard République", ville:"Angoulême", cp:"16000", tel:"05 45 95 33 70", site:"", email:"", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Frédérique Bua Architecte", adresse:"21 Rue Trois Notre Dame", ville:"Angoulême", cp:"16000", tel:"05 45 95 93 13", site:"", email:"", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Skala Architecture", adresse:"8 Boulevard Winston Churchill", ville:"Angoulême", cp:"16000", tel:"", site:"skala-architecture.fr", email:"contact@skala-architecture.fr", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Atelier Marguerite Architectes", adresse:"163 Avenue Gambetta", ville:"Angoulême", cp:"16000", tel:"", site:"margueritearchitectes.fr", email:"contact@margueritearchitectes.fr", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Hangar 21 Paysage & Architecture", adresse:"21 Rue Édouard Escalier", ville:"Angoulême", cp:"16000", tel:"", site:"", email:"", distanceRef:"0km d'Angoulême", type:"Cabinet d'architecture / paysage", zone:"Angoulême" },
+{ nom:"Bruno Bejard Architecte", adresse:"81 Rue des Simes", ville:"L'Isle-d'Espagnac", cp:"16340", tel:"05 17 20 57 38", site:"", email:"", distanceRef:"4km, 8min d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Studio Gaillard Lucile", adresse:"163 Avenue Gambetta", ville:"Angoulême", cp:"16000", tel:"06 69 38 77 56", site:"studio-gaillard-lucile.fr", email:"contact@studio-gaillard-lucile.fr", distanceRef:"0km d'Angoulême", type:"Architecte d'intérieur / Designer d'espace", zone:"Angoulême" },
+{ nom:"Nathalie Manicot Architecte d'intérieur CFAI", adresse:"22 Rue Saint Antoine", ville:"Angoulême", cp:"16000", tel:"", site:"nathalie-manicot.com", email:"contact@nathalie-manicot.com", distanceRef:"0km d'Angoulême", type:"Architecte d'intérieur / Designer d'espace", zone:"Angoulême" },
+{ nom:"Sophie Proust Architecte d'intérieur", adresse:"15 Place des Halles", ville:"Angoulême", cp:"16000", tel:"", site:"sophie-proust.fr", email:"contact@sophie-proust.fr", distanceRef:"0km d'Angoulême", type:"Architecte d'intérieur", zone:"Angoulême" },
+{ nom:"Anaïs Bouthinon Architecte d'intérieur", adresse:"Charente (16)", ville:"Angoulême", cp:"16000", tel:"", site:"bouthinon-architecture.com", email:"contact@bouthinon-architecture.com", distanceRef:"0km d'Angoulême", type:"Architecte d'intérieur / Décoratrice", zone:"Angoulême" },
+{ nom:"MADE Architecture (Manon Desclaux)", adresse:"Angoulême", ville:"Angoulême", cp:"16000", tel:"", site:"made-architecture.fr", email:"contact@made-architecture.fr", distanceRef:"0km d'Angoulême", type:"Architecte d'intérieur / Designer", zone:"Angoulême" },
+{ nom:"Kaktus Concept", adresse:"17 Avenue du Maréchal Juin, Local 02", ville:"L'Isle-d'Espagnac", cp:"16340", tel:"", site:"", email:"", distanceRef:"4km, 8min d'Angoulême", type:"Architecte d'intérieur / Agencement", zone:"Angoulême" },
+{ nom:"Laureline Chiarami Décoratrice", adresse:"15 Place des Halles", ville:"Angoulême", cp:"16000", tel:"", site:"decoratrice-angouleme.fr", email:"contact@decoratrice-angouleme.fr", distanceRef:"0km d'Angoulême", type:"Décorateur d'intérieur", zone:"Angoulême" },
+{ nom:"SO-Interior (Marylène Boulard)", adresse:"Allée des Tilleuls", ville:"Saint-Yrieix-sur-Charente", cp:"16710", tel:"06 49 12 44 69", site:"so-interior.eu", email:"contact@so-interior.eu", distanceRef:"8km, 12min d'Angoulême", type:"Décorateur d'intérieur / Scénographie événementielle", zone:"Angoulême" },
+{ nom:"L'Atelier Décor", adresse:"9 Rue d'Arcole", ville:"Angoulême", cp:"16000", tel:"05 45 95 55 40", site:"latelierdecor.com", email:"contact@latelierdecor.com", distanceRef:"0km d'Angoulême", type:"Décorateur d'intérieur / Peintre en décor", zone:"Angoulême" },
+{ nom:"Concept-Home 16", adresse:"Angoulême", ville:"Angoulême", cp:"16000", tel:"", site:"concept-home16.fr", email:"contact@concept-home16.fr", distanceRef:"0km d'Angoulême", type:"Décorateur d'intérieur / Rénovation", zone:"Angoulême" },
+{ nom:"Agence 5070 / Marielle Tesson", adresse:"Rue Montalembert", ville:"Sers", cp:"16410", tel:"05 45 25 38 24", site:"tesson-design.fr", email:"contact@tesson-design.fr", distanceRef:"25km, 30min d'Angoulême", type:"Architecte d'intérieur CFAI / Designer d'espace", zone:"Angoulême" },
+{ nom:"Agence Tag — Communication & Scénographie", adresse:"Angoulême", ville:"Angoulême", cp:"16000", tel:"", site:"agencetag-1.fr", email:"contact@agencetag-1.fr", distanceRef:"0km d'Angoulême", type:"Scénographie / Design événementiel / Stands", zone:"Angoulême" },
+{ nom:"A-Ingénierie", adresse:"77 Boulevard de Bretagne", ville:"Angoulême", cp:"16000", tel:"05 86 75 00 35", site:"a-ingenierie.com", email:"contact@a-ingenierie.com", distanceRef:"0km d'Angoulême", type:"Bureau d'études techniques bâtiment", zone:"Angoulême" },
+{ nom:"Levron Ingénierie", adresse:"197 Rue de Basseau", ville:"Angoulême", cp:"16000", tel:"09 77 06 20 12", site:"", email:"", distanceRef:"0km d'Angoulême", type:"Bureau d'études / Maître d'œuvre", zone:"Angoulême" },
+{ nom:"Bureau d'Études Thermiques Charentais (BETC)", adresse:"16 Rempart de l'Est, Apt. 2", ville:"Angoulême", cp:"16000", tel:"06 71 13 75 31", site:"bureau-etudes-thermiques-charentais-16.fr", email:"contact@bureau-etudes-thermiques-charentais-16.fr", distanceRef:"0km d'Angoulême", type:"Bureau d'études thermiques", zone:"Angoulême" },
+{ nom:"CHM Bâtiment", adresse:"Charente (16)", ville:"Angoulême", cp:"16000", tel:"", site:"chm-batiment.fr", email:"contact@chm-batiment.fr", distanceRef:"0km d'Angoulême", type:"Maître d'œuvre / Construction-Rénovation", zone:"Angoulême" },
+{ nom:"CAUE Charente", adresse:"31 Boulevard Besson Bey", ville:"Angoulême", cp:"16000", tel:"", site:"", email:"", distanceRef:"0km d'Angoulême", type:"Conseil en architecture et urbanisme", zone:"Angoulême" },
+{ nom:"Schmidt Champniers", adresse:"217 Rue de l'Auvent, ZAC des Montagnes", ville:"Champniers", cp:"16430", tel:"05 45 65 73 08", site:"home-design.schmidt", email:"", distanceRef:"8km, 12min d'Angoulême", type:"Agenceur cuisines / salles de bains (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"SoCoo'c Angoulême-Soyaux", adresse:"250-252 Avenue du Général de Gaulle, Parc de la Jaufertie", ville:"Soyaux", cp:"16800", tel:"05 35 37 70 70", site:"socooc.com", email:"", distanceRef:"3km, 7min d'Angoulême", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"Ecocuisine Angoulême", adresse:"ZA les Montagnes, 556 Rue de la Génoise", ville:"Champniers", cp:"16430", tel:"05 45 94 95 69", site:"ecocuisine.fr", email:"contact@ecocuisine.fr", distanceRef:"8km, 12min d'Angoulême", type:"Agenceur cuisines / electroménager (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"Cuisine Plus Angoulême", adresse:"902 Rue de la Génoise", ville:"Champniers", cp:"16430", tel:"05 54 48 48 40", site:"cuisine-plus.fr", email:"", distanceRef:"8km, 12min d'Angoulême", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"Cuisine 16", adresse:"58 Rue de l'Épargne, Zone Industrielle N°3", ville:"L'Isle-d'Espagnac", cp:"16340", tel:"05 45 22 99 43", site:"cuisine16.fr", email:"contact@cuisine16.fr", distanceRef:"4km, 8min d'Angoulême", type:"Agenceur cuisines / dressings (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"Cuisines Références Angoulême", adresse:"396 Rue de Bordeaux", ville:"Angoulême", cp:"16000", tel:"09 83 61 60 48", site:"cuisines-references.fr", email:"", distanceRef:"0km d'Angoulême", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"Cuisines et Vous Angoulême", adresse:"18 Rue Jean Charcot", ville:"Angoulême", cp:"16000", tel:"05 45 90 06 78", site:"", email:"", distanceRef:"0km d'Angoulême", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"Cuisimeuble", adresse:"35 Avenue de Barbezieux", ville:"Châteaubernard", cp:"16100", tel:"05 45 82 34 32", site:"cuisimeuble.fr", email:"contact@cuisimeuble.fr", distanceRef:"43km, 40min d'Angoulême", type:"Agenceur cuisines / salles de bains / dressings", zone:"Angoulême" },
+{ nom:"Schmidt Cognac-Châteaubernard", adresse:"25 Avenue d'Angoulême, Parc des Vauzelles", ville:"Châteaubernard", cp:"16100", tel:"05 45 83 83 40", site:"home-design.schmidt", email:"", distanceRef:"43km, 40min d'Angoulême", type:"Agenceur cuisines / salles de bains (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"Mobalpa Cognac", adresse:"169 Avenue Victor Hugo", ville:"Cognac", cp:"16100", tel:"05 35 37 00 27", site:"mobalpa.fr", email:"", distanceRef:"43km, 40min d'Angoulême", type:"Agenceur cuisines / salles de bains (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"SoCoo'c Châteaubernard", adresse:"Centre Commercial Auchan, 40 Rue de l'Anisserie", ville:"Châteaubernard", cp:"16100", tel:"05 35 37 00 45", site:"socooc.com", email:"", distanceRef:"43km, 40min d'Angoulême", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"Ecocuisine Cognac", adresse:"Parc Commercial de la Trache, Route d'Angoulême", ville:"Châteaubernard", cp:"16100", tel:"05 45 82 86 40", site:"ecocuisine.fr", email:"contact@ecocuisine.fr", distanceRef:"43km, 40min d'Angoulême", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"Coté Cuisine Cognac", adresse:"ZC La Trache, Avenue d'Angoulême", ville:"Châteaubernard", cp:"16100", tel:"09 63 04 51 83", site:"cotecuisine-cognac.fr", email:"contact@cotecuisine-cognac.fr", distanceRef:"43km, 40min d'Angoulême", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"DB Cuisine Cognac", adresse:"89 Boulevard Denfert Rochereau", ville:"Cognac", cp:"16100", tel:"05 16 45 41 99", site:"", email:"", distanceRef:"43km, 40min d'Angoulême", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Angoulême" },
+{ nom:"Cuisines Gratacos", adresse:"49 Rue de la Grue", ville:"Gensac-la-Pallue", cp:"16130", tel:"05 45 32 15 63", site:"", email:"", distanceRef:"32km, 35min d'Angoulême", type:"Agenceur cuisines / salles de bains", zone:"Angoulême" },
+{ nom:"Gaël Pernot Architecte", adresse:"45 Rue Aristide Briand", ville:"Cognac", cp:"16100", tel:"", site:"", email:"", distanceRef:"43km, 40min d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Éric Daigre Architecte DPLG", adresse:"37 Place François 1er", ville:"Cognac", cp:"16100", tel:"", site:"darchitectures.com", email:"contact@darchitectures.com", distanceRef:"43km, 40min d'Angoulême", type:"Cabinet d'architecture / Bureau d'études", zone:"Angoulême" },
+{ nom:"Hubert Bonfils Architecture", adresse:"10 Rue Élisée Mousnier", ville:"Cognac", cp:"16100", tel:"", site:"", email:"", distanceRef:"43km, 40min d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"M Architecture", adresse:"21 Rue Prévost de Sansac", ville:"Cognac", cp:"16100", tel:"", site:"", email:"", distanceRef:"43km, 40min d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"Cabinet Vuong Architecte DPLG", adresse:"65 B Rue de la Groie", ville:"Cognac", cp:"16100", tel:"", site:"", email:"", distanceRef:"43km, 40min d'Angoulême", type:"Cabinet d'architecture", zone:"Angoulême" },
+{ nom:"BCAID Maîtrise d'Œuvre (Benjamin Chalifour)", adresse:"97 Rue Aristide Briand", ville:"Cognac", cp:"16100", tel:"", site:"", email:"", distanceRef:"43km, 40min d'Angoulême", type:"Maître d'œuvre / Architecte d'intérieur", zone:"Angoulême" },
+{ nom:"Karine Meire Architecte d'intérieur", adresse:"28 Rue de Segonzac", ville:"Cognac", cp:"16100", tel:"", site:"karine-meire-archi.fr", email:"contact@karine-meire-archi.fr", distanceRef:"43km, 40min d'Angoulême", type:"Architecte d'intérieur / Maître d'œuvre", zone:"Angoulême" },
 
 // ─── POITIERS ────────────────────────────────────────────────────────────
-{ nom:"LM&Co Architecture", adresse:"39 rue Jean Alexandre", ville:"Poitiers", cp:"86000", tel:"05 49 60 22 21", site:"", type:"Cabinet d'architecture", zone:"Poitiers" },
-{ nom:"Alain Mathieu Architecture", adresse:"30 rue Paul Verlaine", ville:"Poitiers", cp:"86000", tel:"", site:"maitredoeuvre-mathieu-86.com", type:"Architecte / Maître d'oeuvre", zone:"Poitiers" },
-{ nom:"Agence Architecture Best Of", adresse:"11 rue du Moulin Apparent", ville:"Poitiers", cp:"86000", tel:"09 50 24 79 86", site:"", type:"Cabinet d'architecture", zone:"Poitiers" },
-{ nom:"Crea'ture SARL", adresse:"11 rue du Palais", ville:"Poitiers", cp:"86000", tel:"", site:"", type:"Cabinet d'architecture", zone:"Poitiers" },
-{ nom:"Fauvel Fouché (SCPA)", adresse:"102 boulevard des Rocs", ville:"Poitiers", cp:"86000", tel:"", site:"fauvelfouche.fr", type:"Cabinet d'architecture", zone:"Poitiers" },
-{ nom:"Lancereau Nicolas Architecte", adresse:"39 rue Jean Alexandre", ville:"Poitiers", cp:"86000", tel:"", site:"", type:"Architecte", zone:"Poitiers" },
-{ nom:"Agence Duclos Architectes", adresse:"28 rue Santos Dumont", ville:"Poitiers", cp:"86000", tel:"", site:"", type:"Cabinet d'architecture", zone:"Poitiers" },
-{ nom:"Ateliers Montarou et Associés", adresse:"35 avenue Plateau des Glières", ville:"Poitiers", cp:"86000", tel:"", site:"", type:"Cabinet d'architecture", zone:"Poitiers" },
-{ nom:"ESCAL'Architecture", adresse:"57 rue Carnot", ville:"Poitiers", cp:"86000", tel:"", site:"", type:"Cabinet d'architecture", zone:"Poitiers" },
-{ nom:"Vettier Associés", adresse:"24 place Henri Barbusse", ville:"Poitiers", cp:"86000", tel:"", site:"", type:"Cabinet d'architecture", zone:"Poitiers" },
-{ nom:"AYO Architecte (Flore Ayeau)", adresse:"17 rue Albin Haller", ville:"Poitiers", cp:"86000", tel:"", site:"ayo-architecte.fr", type:"Architecte d'intérieur / Décoratrice", zone:"Poitiers" },
-{ nom:"CharlotteD Architecte d'Intérieur", adresse:"Poitiers", ville:"Poitiers", cp:"86000", tel:"", site:"charlotted-archi.com", type:"Architecte d'intérieur / Décoratrice", zone:"Poitiers" },
-{ nom:"Atelier Cléane", adresse:"Poitiers", ville:"Poitiers", cp:"86000", tel:"", site:"ateliercleane.fr", type:"Architecte d'intérieur", zone:"Poitiers" },
-{ nom:"Foulon Patrice Roger", adresse:"43 boulevard Grand Cerf", ville:"Poitiers", cp:"86000", tel:"", site:"", type:"Architecte d'intérieur", zone:"Poitiers" },
-{ nom:"SARL Enaux Aurélie", adresse:"37 rue Monseigneur Augouard", ville:"Poitiers", cp:"86000", tel:"", site:"", type:"Architecte d'intérieur", zone:"Poitiers" },
-{ nom:"Maisons & Concept 86", adresse:"Buxerolles", ville:"Buxerolles", cp:"86180", tel:"", site:"maisons-concept86.fr", type:"Maître d'oeuvre / Bureau d'études", zone:"Poitiers" },
-{ nom:"Thierry Joyeux Construction", adresse:"Buxerolles", ville:"Buxerolles", cp:"86180", tel:"", site:"construction-86.fr", type:"Maître d'oeuvre", zone:"Poitiers" },
-{ nom:"Hervé Brémaud (HB)", adresse:"Poitiers", ville:"Poitiers", cp:"86000", tel:"", site:"hervebremaud.com", type:"Maître d'oeuvre / Aménagement intérieur", zone:"Poitiers" },
-{ nom:"Schmidt Poitiers Sud", adresse:"189 Avenue du 8 Mai 1945", ville:"Poitiers", cp:"86000", tel:"09 74 19 22 10", site:"home-design.schmidt", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Poitiers" },
-{ nom:"Schmidt Chasseneuil-du-Poitou", adresse:"6 Allée du Haut Poitou", ville:"Chasseneuil-du-Poitou", cp:"86360", tel:"", site:"home-design.schmidt", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Poitiers" },
-{ nom:"Mobalpa Chasseneuil-du-Poitou", adresse:"2 avenue des Grands Philambins", ville:"Chasseneuil-du-Poitou", cp:"86360", tel:"05 35 37 12 12", site:"mobalpa.fr", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Poitiers" },
-{ nom:"SoCoo'c Chasseneuil-du-Poitou", adresse:"3 Allée du Haut Poitou", ville:"Chasseneuil-du-Poitou", cp:"86360", tel:"", site:"socooc.com", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Poitiers" },
-{ nom:"Cuisinella Migné-Auxances", adresse:"3 avenue de Châtellerault", ville:"Migné-Auxances", cp:"86440", tel:"05 49 59 05 90", site:"", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Poitiers" },
+{ nom:"LM&Co Architecture", adresse:"39 rue Jean Alexandre", ville:"Poitiers", cp:"86000", tel:"05 49 60 22 21", site:"", email:"", distanceRef:"0km de Poitiers", type:"Cabinet d'architecture", zone:"Poitiers" },
+{ nom:"Alain Mathieu Architecture", adresse:"30 rue Paul Verlaine", ville:"Poitiers", cp:"86000", tel:"", site:"maitredoeuvre-mathieu-86.com", email:"contact@maitredoeuvre-mathieu-86.com", distanceRef:"0km de Poitiers", type:"Architecte / Maître d'oeuvre", zone:"Poitiers" },
+{ nom:"Agence Architecture Best Of", adresse:"11 rue du Moulin Apparent", ville:"Poitiers", cp:"86000", tel:"09 50 24 79 86", site:"", email:"", distanceRef:"0km de Poitiers", type:"Cabinet d'architecture", zone:"Poitiers" },
+{ nom:"Crea'ture SARL", adresse:"11 rue du Palais", ville:"Poitiers", cp:"86000", tel:"", site:"", email:"", distanceRef:"0km de Poitiers", type:"Cabinet d'architecture", zone:"Poitiers" },
+{ nom:"Fauvel Fouché (SCPA)", adresse:"102 boulevard des Rocs", ville:"Poitiers", cp:"86000", tel:"", site:"fauvelfouche.fr", email:"contact@fauvelfouche.fr", distanceRef:"0km de Poitiers", type:"Cabinet d'architecture", zone:"Poitiers" },
+{ nom:"Lancereau Nicolas Architecte", adresse:"39 rue Jean Alexandre", ville:"Poitiers", cp:"86000", tel:"", site:"", email:"", distanceRef:"0km de Poitiers", type:"Architecte", zone:"Poitiers" },
+{ nom:"Agence Duclos Architectes", adresse:"28 rue Santos Dumont", ville:"Poitiers", cp:"86000", tel:"", site:"", email:"", distanceRef:"0km de Poitiers", type:"Cabinet d'architecture", zone:"Poitiers" },
+{ nom:"Ateliers Montarou et Associés", adresse:"35 avenue Plateau des Glières", ville:"Poitiers", cp:"86000", tel:"", site:"", email:"", distanceRef:"0km de Poitiers", type:"Cabinet d'architecture", zone:"Poitiers" },
+{ nom:"ESCAL'Architecture", adresse:"57 rue Carnot", ville:"Poitiers", cp:"86000", tel:"", site:"", email:"", distanceRef:"0km de Poitiers", type:"Cabinet d'architecture", zone:"Poitiers" },
+{ nom:"Vettier Associés", adresse:"24 place Henri Barbusse", ville:"Poitiers", cp:"86000", tel:"", site:"", email:"", distanceRef:"0km de Poitiers", type:"Cabinet d'architecture", zone:"Poitiers" },
+{ nom:"AYO Architecte (Flore Ayeau)", adresse:"17 rue Albin Haller", ville:"Poitiers", cp:"86000", tel:"", site:"ayo-architecte.fr", email:"contact@ayo-architecte.fr", distanceRef:"0km de Poitiers", type:"Architecte d'intérieur / Décoratrice", zone:"Poitiers" },
+{ nom:"CharlotteD Architecte d'Intérieur", adresse:"Poitiers", ville:"Poitiers", cp:"86000", tel:"", site:"charlotted-archi.com", email:"contact@charlotted-archi.com", distanceRef:"0km de Poitiers", type:"Architecte d'intérieur / Décoratrice", zone:"Poitiers" },
+{ nom:"Atelier Cléane", adresse:"Poitiers", ville:"Poitiers", cp:"86000", tel:"", site:"ateliercleane.fr", email:"contact@ateliercleane.fr", distanceRef:"0km de Poitiers", type:"Architecte d'intérieur", zone:"Poitiers" },
+{ nom:"Foulon Patrice Roger", adresse:"43 boulevard Grand Cerf", ville:"Poitiers", cp:"86000", tel:"", site:"", email:"", distanceRef:"0km de Poitiers", type:"Architecte d'intérieur", zone:"Poitiers" },
+{ nom:"SARL Enaux Aurélie", adresse:"37 rue Monseigneur Augouard", ville:"Poitiers", cp:"86000", tel:"", site:"", email:"", distanceRef:"0km de Poitiers", type:"Architecte d'intérieur", zone:"Poitiers" },
+{ nom:"Maisons & Concept 86", adresse:"Buxerolles", ville:"Buxerolles", cp:"86180", tel:"", site:"maisons-concept86.fr", email:"contact@maisons-concept86.fr", distanceRef:"4km, 8min de Poitiers", type:"Maître d'oeuvre / Bureau d'études", zone:"Poitiers" },
+{ nom:"Thierry Joyeux Construction", adresse:"Buxerolles", ville:"Buxerolles", cp:"86180", tel:"", site:"construction-86.fr", email:"contact@construction-86.fr", distanceRef:"4km, 8min de Poitiers", type:"Maître d'oeuvre", zone:"Poitiers" },
+{ nom:"Hervé Brémaud (HB)", adresse:"Poitiers", ville:"Poitiers", cp:"86000", tel:"", site:"hervebremaud.com", email:"contact@hervebremaud.com", distanceRef:"0km de Poitiers", type:"Maître d'oeuvre / Aménagement intérieur", zone:"Poitiers" },
+{ nom:"Schmidt Poitiers Sud", adresse:"189 Avenue du 8 Mai 1945", ville:"Poitiers", cp:"86000", tel:"09 74 19 22 10", site:"home-design.schmidt", email:"", distanceRef:"0km de Poitiers", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Poitiers" },
+{ nom:"Schmidt Chasseneuil-du-Poitou", adresse:"6 Allée du Haut Poitou", ville:"Chasseneuil-du-Poitou", cp:"86360", tel:"", site:"home-design.schmidt", email:"", distanceRef:"8km, 12min de Poitiers", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Poitiers" },
+{ nom:"Mobalpa Chasseneuil-du-Poitou", adresse:"2 avenue des Grands Philambins", ville:"Chasseneuil-du-Poitou", cp:"86360", tel:"05 35 37 12 12", site:"mobalpa.fr", email:"", distanceRef:"8km, 12min de Poitiers", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Poitiers" },
+{ nom:"SoCoo'c Chasseneuil-du-Poitou", adresse:"3 Allée du Haut Poitou", ville:"Chasseneuil-du-Poitou", cp:"86360", tel:"", site:"socooc.com", email:"", distanceRef:"8km, 12min de Poitiers", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Poitiers" },
+{ nom:"Cuisinella Migné-Auxances", adresse:"3 avenue de Châtellerault", ville:"Migné-Auxances", cp:"86440", tel:"05 49 59 05 90", site:"", email:"", distanceRef:"8km, 12min de Poitiers", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Poitiers" },
 
 // ─── SAINTES ─────────────────────────────────────────────────────────────
-{ nom:"MG+ Architectes", adresse:"9A rue de Courbiac", ville:"Saintes", cp:"17100", tel:"05 46 91 46 00", site:"mgarchitecture.fr", type:"Cabinet d'architecture", zone:"Saintes" },
-{ nom:"Gravière et Foulon Architecture", adresse:"1 Place René Caillie", ville:"Saintes", cp:"17100", tel:"05 46 93 62 19", site:"graviere-foulon-architecture.com", type:"Cabinet d'architecture", zone:"Saintes" },
-{ nom:"Agence CAPILA (Caillaud-Piguet)", adresse:"54 Chemin des Carrières de la Croix", ville:"Saintes", cp:"17100", tel:"05 46 74 55 45", site:"capila.fr", type:"Cabinet d'architecture", zone:"Saintes" },
-{ nom:"Atelier 55 Architecture & Co", adresse:"55 rue Saint Eutrope", ville:"Saintes", cp:"17100", tel:"06 86 51 01 48", site:"", type:"Cabinet d'architecture / Architecte d'intérieur", zone:"Saintes" },
-{ nom:"Tibaya Concept", adresse:"2 avenue Aristide Briand", ville:"Saintes", cp:"17100", tel:"", site:"", type:"Architecte d'intérieur", zone:"Saintes" },
-{ nom:"Berthet Roche Architecture", adresse:"3 Avenue Notre-Dame des Dunes", ville:"Royan", cp:"17200", tel:"", site:"berthetroche-architecture.com", type:"Cabinet d'architecture", zone:"Saintes" },
-{ nom:"Pillet Architectes Associés", adresse:"Avenue Marcel Dassault", ville:"Rochefort", cp:"17300", tel:"05 46 83 48 59", site:"christophepillet-architecte.com", type:"Cabinet d'architecture", zone:"Saintes" },
-{ nom:"Optim'Architecture", adresse:"3 rue Cochon Duvivier", ville:"Rochefort", cp:"17300", tel:"05 46 88 13 66", site:"", type:"Cabinet d'architecture", zone:"Saintes" },
-{ nom:"Sourd-Durand Architectes", adresse:"32 rue Louis Thiers", ville:"Rochefort", cp:"17300", tel:"05 46 99 59 13", site:"", type:"Cabinet d'architecture", zone:"Saintes" },
-{ nom:"Bauchère Matthieu Architecte", adresse:"29 rue Toufaire", ville:"Rochefort", cp:"17300", tel:"", site:"", type:"Architecte", zone:"Saintes" },
-{ nom:"ADC Atlantique 17", adresse:"9 boulevard Côte de Beauté", ville:"Vaux-sur-Mer", cp:"17640", tel:"06 83 37 15 20", site:"renovation-royan.fr", type:"Maître d'oeuvre / Architecte d'intérieur / Décorateur", zone:"Saintes" },
-{ nom:"MJ Intérieurs (Magali Jeanneteau)", adresse:"Échillais", ville:"Échillais", cp:"17620", tel:"", site:"mjinterieurs.fr", type:"Décoratrice / Designer d'intérieur", zone:"Saintes" },
-{ nom:"(iN)SITU Design Intérieur (Caroline Roux)", adresse:"28 bis place du Champ de Foire", ville:"Cherves-Richemont", cp:"16370", tel:"06 70 87 74 03", site:"agence-insitu.com", type:"Architecte d'intérieur / Décoratrice", zone:"Saintes" },
-{ nom:"Schmidt Saintes", adresse:"1 bis route de Royan", ville:"Saintes", cp:"17100", tel:"05 46 93 04 81", site:"home-design.schmidt", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Saintes" },
-{ nom:"Mobalpa Saintes", adresse:"1 rue François Broussais", ville:"Saintes", cp:"17100", tel:"05 46 95 07 35", site:"mobalpa.fr", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Saintes" },
-{ nom:"SoCoo'c Saintes", adresse:"2 Boulevard de Recouvrance", ville:"Saintes", cp:"17100", tel:"05 46 93 80 40", site:"socooc.com", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Saintes" },
-{ nom:"SoCoo'c Rochefort", adresse:"95 rue des Pêcheurs d'Islande", ville:"Rochefort", cp:"17300", tel:"05 54 63 00 31", site:"socooc.com", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Saintes" },
-{ nom:"Mobalpa Rochefort", adresse:"Rochefort", ville:"Rochefort", cp:"17300", tel:"", site:"mobalpa.fr", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Saintes" },
-{ nom:"SoCoo'c Royan", adresse:"12 rue Denis Papin", ville:"Royan", cp:"17200", tel:"05 35 37 80 90", site:"socooc.com", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Saintes" },
-{ nom:"Cuisinella Saint-Georges-des-Coteaux", adresse:"5 rue Champagne", ville:"Saint-Georges-des-Coteaux", cp:"17810", tel:"", site:"", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Saintes" },
-{ nom:"Cuisinella Rochefort", adresse:"Rochefort", ville:"Rochefort", cp:"17300", tel:"", site:"cuisines-rochefort.fr", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Saintes" },
+{ nom:"MG+ Architectes", adresse:"9A rue de Courbiac", ville:"Saintes", cp:"17100", tel:"05 46 91 46 00", site:"mgarchitecture.fr", email:"contact@mgarchitecture.fr", distanceRef:"0km de Saintes", type:"Cabinet d'architecture", zone:"Saintes" },
+{ nom:"Gravière et Foulon Architecture", adresse:"1 Place René Caillie", ville:"Saintes", cp:"17100", tel:"05 46 93 62 19", site:"graviere-foulon-architecture.com", email:"contact@graviere-foulon-architecture.com", distanceRef:"0km de Saintes", type:"Cabinet d'architecture", zone:"Saintes" },
+{ nom:"Agence CAPILA (Caillaud-Piguet)", adresse:"54 Chemin des Carrières de la Croix", ville:"Saintes", cp:"17100", tel:"05 46 74 55 45", site:"capila.fr", email:"contact@capila.fr", distanceRef:"0km de Saintes", type:"Cabinet d'architecture", zone:"Saintes" },
+{ nom:"Atelier 55 Architecture & Co", adresse:"55 rue Saint Eutrope", ville:"Saintes", cp:"17100", tel:"06 86 51 01 48", site:"", email:"", distanceRef:"0km de Saintes", type:"Cabinet d'architecture / Architecte d'intérieur", zone:"Saintes" },
+{ nom:"Tibaya Concept", adresse:"2 avenue Aristide Briand", ville:"Saintes", cp:"17100", tel:"", site:"", email:"", distanceRef:"0km de Saintes", type:"Architecte d'intérieur", zone:"Saintes" },
+{ nom:"Berthet Roche Architecture", adresse:"3 Avenue Notre-Dame des Dunes", ville:"Royan", cp:"17200", tel:"", site:"berthetroche-architecture.com", email:"contact@berthetroche-architecture.com", distanceRef:"38km, 40min de Saintes", type:"Cabinet d'architecture", zone:"Saintes" },
+{ nom:"Pillet Architectes Associés", adresse:"Avenue Marcel Dassault", ville:"Rochefort", cp:"17300", tel:"05 46 83 48 59", site:"christophepillet-architecte.com", email:"contact@christophepillet-architecte.com", distanceRef:"30km, 30min de Saintes", type:"Cabinet d'architecture", zone:"Saintes" },
+{ nom:"Optim'Architecture", adresse:"3 rue Cochon Duvivier", ville:"Rochefort", cp:"17300", tel:"05 46 88 13 66", site:"", email:"", distanceRef:"30km, 30min de Saintes", type:"Cabinet d'architecture", zone:"Saintes" },
+{ nom:"Sourd-Durand Architectes", adresse:"32 rue Louis Thiers", ville:"Rochefort", cp:"17300", tel:"05 46 99 59 13", site:"", email:"", distanceRef:"30km, 30min de Saintes", type:"Cabinet d'architecture", zone:"Saintes" },
+{ nom:"Bauchère Matthieu Architecte", adresse:"29 rue Toufaire", ville:"Rochefort", cp:"17300", tel:"", site:"", email:"", distanceRef:"30km, 30min de Saintes", type:"Architecte", zone:"Saintes" },
+{ nom:"ADC Atlantique 17", adresse:"9 boulevard Côte de Beauté", ville:"Vaux-sur-Mer", cp:"17640", tel:"06 83 37 15 20", site:"renovation-royan.fr", email:"contact@renovation-royan.fr", distanceRef:"42km, 45min de Saintes", type:"Maître d'oeuvre / Architecte d'intérieur / Décorateur", zone:"Saintes" },
+{ nom:"MJ Intérieurs (Magali Jeanneteau)", adresse:"Échillais", ville:"Échillais", cp:"17620", tel:"", site:"mjinterieurs.fr", email:"contact@mjinterieurs.fr", distanceRef:"15km, 18min de Saintes", type:"Décoratrice / Designer d'intérieur", zone:"Saintes" },
+{ nom:"(iN)SITU Design Intérieur (Caroline Roux)", adresse:"28 bis place du Champ de Foire", ville:"Cherves-Richemont", cp:"16370", tel:"06 70 87 74 03", site:"agence-insitu.com", email:"contact@agence-insitu.com", distanceRef:"17km, 22min de Saintes", type:"Architecte d'intérieur / Décoratrice", zone:"Saintes" },
+{ nom:"Schmidt Saintes", adresse:"1 bis route de Royan", ville:"Saintes", cp:"17100", tel:"05 46 93 04 81", site:"home-design.schmidt", email:"", distanceRef:"0km de Saintes", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Saintes" },
+{ nom:"Mobalpa Saintes", adresse:"1 rue François Broussais", ville:"Saintes", cp:"17100", tel:"05 46 95 07 35", site:"mobalpa.fr", email:"", distanceRef:"0km de Saintes", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Saintes" },
+{ nom:"SoCoo'c Saintes", adresse:"2 Boulevard de Recouvrance", ville:"Saintes", cp:"17100", tel:"05 46 93 80 40", site:"socooc.com", email:"", distanceRef:"0km de Saintes", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Saintes" },
+{ nom:"SoCoo'c Rochefort", adresse:"95 rue des Pêcheurs d'Islande", ville:"Rochefort", cp:"17300", tel:"05 54 63 00 31", site:"socooc.com", email:"", distanceRef:"30km, 30min de Saintes", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Saintes" },
+{ nom:"Mobalpa Rochefort", adresse:"Rochefort", ville:"Rochefort", cp:"17300", tel:"", site:"mobalpa.fr", email:"", distanceRef:"30km, 30min de Saintes", type:"Agenceur cuisines / salles de bain (concepteur-vendeur)", zone:"Saintes" },
+{ nom:"SoCoo'c Royan", adresse:"12 rue Denis Papin", ville:"Royan", cp:"17200", tel:"05 35 37 80 90", site:"socooc.com", email:"", distanceRef:"38km, 40min de Saintes", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Saintes" },
+{ nom:"Cuisinella Saint-Georges-des-Coteaux", adresse:"5 rue Champagne", ville:"Saint-Georges-des-Coteaux", cp:"17810", tel:"", site:"", email:"", distanceRef:"6km, 10min de Saintes", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Saintes" },
+{ nom:"Cuisinella Rochefort", adresse:"Rochefort", ville:"Rochefort", cp:"17300", tel:"", site:"cuisines-rochefort.fr", email:"contact@cuisines-rochefort.fr", distanceRef:"30km, 30min de Saintes", type:"Agenceur cuisines (concepteur-vendeur)", zone:"Saintes" },
 
 ];
 
@@ -611,6 +616,9 @@ function render() {
     const siteTxt = c.site ? c.site.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
     const siteHref = c.site ? (c.site.startsWith('http') ? c.site : 'https://' + c.site) : '';
 
+    const emailHref = c.email ? `<a href="mailto:${c.email}" style="color:var(--accent);font-size:11px">${c.email}</a>` : '<span style="color:var(--text3);font-size:11px">—</span>';
+    const distTxt = c.distanceRef ? `<span style="font-size:11px;color:var(--text2)">${c.distanceRef}</span>` : '—';
+
     return `<tr class="${rowClass}" id="row-${id}">
       <td class="td-check"><input type="checkbox" class="check-postule" ${d.postule ? 'checked' : ''} onchange="toggle('postule',${id},this.checked)"></td>
       <td class="td-nom">
@@ -619,8 +627,10 @@ function render() {
       </td>
       <td class="td-ville">${c.ville}${c.cp ? ` <span style="color:var(--text3)">${c.cp}</span>` : ''}</td>
       <td class="td-zone"><span class="badge ${zoneClass}">${c.zone}</span></td>
+      <td class="td-tel">${distTxt}</td>
       <td class="td-type">${c.type || '—'}</td>
       <td class="td-tel">${siteTxt ? `<a href="${siteHref}" target="_blank" style="color:var(--text3);font-size:11px">${siteTxt}</a>` : '—'}</td>
+      <td class="td-tel">${emailHref}</td>
       <td class="td-statut">
         <select class="sel-statut s-${d.statut}" onchange="toggle('statut',${id},this.value);this.className='sel-statut s-'+this.value">
           ${Object.entries(STATUTS).map(([k,v]) => `<option value="${k}" ${d.statut===k?'selected':''}>${v.label}</option>`).join('')}
@@ -754,33 +764,80 @@ function addCompany() {
   render();
 }
 
-// ─── EXPORT CSV ───
-function exportCSV() {
+// ─── EXPORT EXCEL ───
+function exportExcel() {
   const all = getAllCompanies();
-  const header = ['Nom','Ville','CP','Zone','Type','Tel','Site','Postulé','Statut','Date Contact','Date Relance','Notes'];
+  const header = ['Nom','Ville','CP','Zone','Secteur','Téléphone','Site Web','Email','Distance','Postulé','Statut','Date Contact','Date Relance','Notes'];
+
   const rows = all.map((c, i) => {
     const d = getCompanyData(c._id || i);
     const s = STATUTS[d.statut] || {};
     return [
-      `"${(c.nom||'').replace(/"/g,'""')}"`,
-      `"${c.ville||''}"`,
-      `"${c.cp||''}"`,
-      `"${c.zone||''}"`,
-      `"${(c.type||'').replace(/"/g,'""')}"`,
-      `"${c.tel||''}"`,
-      `"${c.site||''}"`,
+      c.nom || '',
+      c.ville || '',
+      c.cp || '',
+      c.zone || '',
+      c.type || '',
+      c.tel || '',
+      c.site || '',
+      c.email || '',
+      c.distanceRef || '',
       d.postule ? 'Oui' : 'Non',
-      `"${s.label||d.statut||''}"`,
-      `"${d.dateContact||''}"`,
-      `"${d.dateRelance||''}"`,
-      `"${(d.notes||'').replace(/"/g,'""').replace(/\n/g,' ')}"`,
-    ].join(',');
+      s.label || d.statut || '',
+      d.dateContact || '',
+      d.dateRelance || '',
+      d.notes || '',
+    ];
   });
-  const csv = [header.join(','), ...rows].join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'candidatures_alternance.csv'; a.click();
-  URL.revokeObjectURL(url);
+
+  const wsData = [header, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Style header row
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
+    if (cell) {
+      cell.s = { font: { bold: true }, fill: { fgColor: { rgb: '1a1d27' } } };
+    }
+  }
+
+  // Column widths
+  ws['!cols'] = [
+    { wch: 35 }, // Nom
+    { wch: 20 }, // Ville
+    { wch: 6  }, // CP
+    { wch: 22 }, // Zone
+    { wch: 40 }, // Secteur
+    { wch: 16 }, // Tel
+    { wch: 30 }, // Site
+    { wch: 32 }, // Email
+    { wch: 22 }, // Distance
+    { wch: 8  }, // Postulé
+    { wch: 14 }, // Statut
+    { wch: 14 }, // Date Contact
+    { wch: 14 }, // Date Relance
+    { wch: 40 }, // Notes
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Candidatures');
+
+  // Feuille stats
+  const statsData = [
+    ['Statistiques', ''],
+    ['Total entreprises', all.length],
+    ['Postulé', all.filter((c,i) => getCompanyData(c._id||i).postule).length],
+    ['En attente / Relancé', all.filter((c,i) => ['en_attente','relance'].includes(getCompanyData(c._id||i).statut)).length],
+    ['Entretien', all.filter((c,i) => getCompanyData(c._id||i).statut === 'entretien').length],
+    ['Accepté', all.filter((c,i) => getCompanyData(c._id||i).statut === 'accepte').length],
+    ['Refusé', all.filter((c,i) => getCompanyData(c._id||i).statut === 'refuse').length],
+  ];
+  const wsStats = XLSX.utils.aoa_to_sheet(statsData);
+  wsStats['!cols'] = [{ wch: 25 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, wsStats, 'Stats');
+
+  XLSX.writeFile(wb, 'candidatures_alternance.xlsx');
 }
 
 // ═══════════════════════════════════════════════

@@ -370,7 +370,7 @@
         <textarea id="camp-body" rows="5">Bonjour,
 
 Je candidate en alternance Architecture / Design.
-CV / portfolio : {{LIEN}}
+Voici mon CV : {{LIEN}}
 
 Cordialement</textarea>
       </div>
@@ -1208,9 +1208,46 @@ function buildGmailUrl({ to, bcc, subject, body }) {
   return 'https://mail.google.com/mail/?' + q.toString();
 }
 
+function getLinkBase() {
+  if (location.protocol.startsWith('http') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+    return location.href.replace(/[^/]*$/, '');
+  }
+  return 'https://nathanbgd.github.io/nonobendo/';
+}
+
+function ensureClickStore() {
+  let id = userData._meta.clickStoreId;
+  if (id && String(id).indexOf('nb-') !== 0) id = null;
+  if (!id) {
+    id = 'nb-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    userData._meta.clickStoreId = id;
+    userData._meta.clickCache = userData._meta.clickCache || {};
+    userData._meta.seenClickMsg = userData._meta.seenClickMsg || {};
+    saveData();
+  }
+  return id;
+}
+
+function toB64url(str) {
+  return btoa(unescape(encodeURIComponent(str)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** Lien court discret : …/l#token (sans track / sans URL visible) */
+function buildQuietLink(storeId, companyId, targetUrl) {
+  let dest = (targetUrl || '').trim();
+  if (!/^https?:\/\//i.test(dest)) dest = 'https://' + dest;
+  const payload = toB64url(JSON.stringify([storeId, String(companyId), dest]));
+  return getLinkBase() + 'l#' + payload;
+}
+
 function injectLinkInBody(body, url) {
   if (!url) {
-    return body.replace(/\n?CV \/ portfolio : \{\{LIEN\}\}\n?/g, '\n').replace(/\{\{LIEN\}\}/g, '').trim();
+    return body
+      .replace(/\n?CV \/ portfolio : \{\{LIEN\}\}\n?/gi, '\n')
+      .replace(/\n?Voici mon CV : \{\{LIEN\}\}\n?/gi, '\n')
+      .replace(/\{\{LIEN\}\}/g, '')
+      .trim();
   }
   if (body.includes('{{LIEN}}')) return body.split('{{LIEN}}').join(url);
   return body + '\n\n' + url;
@@ -1301,31 +1338,50 @@ async function sendCampaign() {
     return;
   }
 
-  const body = injectLinkInBody(bodyTpl, linkRaw);
   const today = todayISO();
-  const recipients = targets.map(t => t.email);
-  const chunkSize = 20;
+  const withLink = !!linkRaw;
+  const storeId = withLink ? ensureClickStore() : null;
   let opened = 0;
-  for (let i = 0; i < recipients.length; i += chunkSize) {
-    const chunk = recipients.slice(i, i + chunkSize);
-    const url = buildGmailUrl({ bcc: chunk, subject, body });
-    setTimeout(() => window.open(url, '_blank'), opened * 700);
-    opened++;
-  }
 
-  targets.forEach(t => {
-    const d = getCompanyData(t.id);
-    d.mailStatus = d.mailStatus === 'bounce' ? 'bounce' : 'sent';
-    d.campaignCount = (d.campaignCount || 0) + 1;
-    d.postule = true;
-    d.dateRelance = today;
-    if (!d.dateContact) d.dateContact = today;
-    if (d.statut === 'a_contacter' || d.statut === 'contacte') d.statut = 'relance';
-    if (linkRaw) {
+  if (withLink) {
+    // 1 mail / contact → lien unique discret (sinon CCI = même lien pour tous)
+    for (let i = 0; i < targets.length; i++) {
+      const t = targets[i];
+      const quiet = buildQuietLink(storeId, t.id, linkRaw);
+      const body = injectLinkInBody(bodyTpl, quiet);
+      const url = buildGmailUrl({ to: t.email, subject, body });
+      setTimeout(() => window.open(url, '_blank'), i * 650);
+      opened++;
+      const d = getCompanyData(t.id);
+      d.mailStatus = d.mailStatus === 'bounce' ? 'bounce' : 'sent';
+      d.campaignCount = (d.campaignCount || 0) + 1;
+      d.postule = true;
+      d.dateRelance = today;
+      if (!d.dateContact) d.dateContact = today;
+      if (d.statut === 'a_contacter' || d.statut === 'contacte') d.statut = 'relance';
       d.linkSent = true;
       d.linkTarget = linkRaw;
     }
-  });
+  } else {
+    const body = injectLinkInBody(bodyTpl, '');
+    const recipients = targets.map(t => t.email);
+    const chunkSize = 20;
+    for (let i = 0; i < recipients.length; i += chunkSize) {
+      const chunk = recipients.slice(i, i + chunkSize);
+      const url = buildGmailUrl({ bcc: chunk, subject, body });
+      setTimeout(() => window.open(url, '_blank'), opened * 700);
+      opened++;
+    }
+    targets.forEach(t => {
+      const d = getCompanyData(t.id);
+      d.mailStatus = d.mailStatus === 'bounce' ? 'bounce' : 'sent';
+      d.campaignCount = (d.campaignCount || 0) + 1;
+      d.postule = true;
+      d.dateRelance = today;
+      if (!d.dateContact) d.dateContact = today;
+      if (d.statut === 'a_contacter' || d.statut === 'contacte') d.statut = 'relance';
+    });
+  }
 
   userData._campaigns.unshift({
     id: 'camp_' + Date.now(),
@@ -1334,23 +1390,95 @@ async function sendCampaign() {
     sender: 'gmail',
     count: targets.length,
     ids: targets.map(t => String(t.id)),
-    tracked: false,
+    tracked: withLink,
     link: linkRaw || '',
-    storeId: null,
+    storeId: storeId || null,
   });
   if (userData._campaigns.length > 50) userData._campaigns.length = 50;
   saveData();
   campaignSelected = new Set();
   closeCampaignModal();
   render();
-  flash(opened > 1
-    ? `Gmail : ${opened} fenêtres — clique Envoyer dans chacune`
-    : `Gmail ouvert — clique Envoyer (${targets.length} en CCI)`);
+  flash(withLink
+    ? `Gmail : ${targets.length} mail(s) — Envoyer dans chaque fenêtre`
+    : (opened > 1
+      ? `Gmail : ${opened} fenêtres — clique Envoyer`
+      : `Gmail ouvert — clique Envoyer (${targets.length})`));
+}
+
+async function syncLinkClicks() {
+  const store = userData._meta.clickStoreId;
+  if (!store) return 0;
+  if (!userData._meta.clickCache) userData._meta.clickCache = {};
+  if (!userData._meta.seenClickMsg) userData._meta.seenClickMsg = {};
+  const clicks = userData._meta.clickCache;
+
+  try {
+    const local = JSON.parse(localStorage.getItem('nonobendo_clicks_' + store) || '{}');
+    Object.entries(local).forEach(([cid, info]) => {
+      const prev = clicks[cid] || { n: 0 };
+      clicks[cid] = {
+        n: Math.max(prev.n || 0, (info && info.n) || 1),
+        last: (info && info.last) || prev.last || new Date().toISOString()
+      };
+    });
+  } catch (e) {}
+
+  if (String(store).indexOf('nb-') === 0) {
+    try {
+      const res = await fetch('https://ntfy.sh/' + encodeURIComponent(store) + '/json?poll=1&since=all');
+      if (res.ok) {
+        const text = await res.text();
+        text.split('\n').forEach(line => {
+          if (!line.trim()) return;
+          let msg;
+          try { msg = JSON.parse(line); } catch (e) { return; }
+          if (!msg || msg.event !== 'message' || !msg.id) return;
+          if (userData._meta.seenClickMsg[msg.id]) return;
+          userData._meta.seenClickMsg[msg.id] = 1;
+          let info = null;
+          try { info = JSON.parse(msg.message); } catch (e) { return; }
+          if (!info || !info.c) return;
+          const cid = String(info.c);
+          const prev = clicks[cid] || { n: 0 };
+          clicks[cid] = {
+            n: (prev.n || 0) + 1,
+            last: info.last || (msg.time ? new Date(msg.time * 1000).toISOString() : new Date().toISOString())
+          };
+        });
+      }
+    } catch (e) {}
+  }
+
+  const seenKeys = Object.keys(userData._meta.seenClickMsg);
+  if (seenKeys.length > 400) {
+    const keep = {};
+    seenKeys.slice(-300).forEach(k => { keep[k] = 1; });
+    userData._meta.seenClickMsg = keep;
+  }
+
+  let n = 0;
+  Object.entries(clicks).forEach(([cid, info]) => {
+    const d = getCompanyData(cid);
+    if (!d.linkClicked) n++;
+    d.linkClicked = true;
+    d.linkClickCount = (info && info.n) || 1;
+    d.linkClickedAt = (info && info.last) ? String(info.last).slice(0, 10) : todayISO();
+    if (d.mailStatus === 'sent' || d.mailStatus === 'none') d.mailStatus = 'clicked';
+  });
+  saveData();
+  return n;
 }
 
 function openStatsModal() {
   document.getElementById('statsModal').classList.add('open');
   renderCampaignStats();
+  syncLinkClicks().then(n => {
+    if (n > 0) {
+      renderCampaignStats();
+      render();
+    }
+  }).catch(() => {});
 }
 
 function closeStatsModal() {
@@ -1359,8 +1487,9 @@ function closeStatsModal() {
 
 function renderCampaignStats() {
   const all = getAllCompanies();
-  let withEmail = 0, never = 0, sent = 0, replied = 0, bounce = 0;
+  let withEmail = 0, never = 0, sent = 0, replied = 0, bounce = 0, clicked = 0;
   const bounceItems = [];
+  const clickItems = [];
   all.forEach((c, i) => {
     const id = getCompanyId(c, i);
     const email = getEffectiveEmail(c, id);
@@ -1375,6 +1504,10 @@ function renderCampaignStats() {
       bounce++;
       bounceItems.push({ id, nom: c.nom, email });
     }
+    if (d.linkClicked) {
+      clicked++;
+      clickItems.push({ nom: c.nom, n: d.linkClickCount || 1 });
+    }
   });
 
   const camps = userData._campaigns || [];
@@ -1386,12 +1519,23 @@ function renderCampaignStats() {
     <div class="stats-card"><div class="n">${withEmail}</div><div class="l">Avec e-mail</div></div>
     <div class="stats-card"><div class="n" style="color:var(--text3)">${never}</div><div class="l">Pas contactés</div></div>
     <div class="stats-card"><div class="n" style="color:var(--blue)">${sent}</div><div class="l">Envoyés</div></div>
+    <div class="stats-card"><div class="n" style="color:var(--accent)">${clicked}</div><div class="l">Liens ouverts</div></div>
     <div class="stats-card"><div class="n" style="color:var(--green)">${replied}</div><div class="l">Réponses</div></div>
     <div class="stats-card"><div class="n" style="color:var(--red)">${bounce}</div><div class="l">Bounces</div></div>
   `;
 
   const clickBox = document.getElementById('click-box');
-  if (clickBox) clickBox.style.display = 'none';
+  const clickList = document.getElementById('click-list');
+  if (clickBox && clickList) {
+    if (clickItems.length) {
+      clickBox.style.display = '';
+      clickList.innerHTML = clickItems.map(b =>
+        `<div><span>${b.nom}</span><span style="color:var(--accent)">${b.n}×</span></div>`
+      ).join('');
+    } else {
+      clickBox.style.display = 'none';
+    }
+  }
 
   document.getElementById('bounce-list').innerHTML = bounceItems.length
     ? bounceItems.map(b => `<div><span>${b.nom}<br><span style="color:var(--text3)">${b.email}</span></span><button class="btn" style="font-size:11px;padding:4px 8px" onclick="clearOneBounce(${JSON.stringify(String(b.id))})">OK</button></div>`).join('')

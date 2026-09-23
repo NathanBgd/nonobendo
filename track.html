@@ -2,65 +2,14 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Redirection…</title>
-<style>
-  body { font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-  p { color: #94a3b8; }
-</style>
-</head>
-<body>
-<p id="msg">Enregistrement du clic, redirection…</p>
+<meta http-equiv="refresh" content="0;url=l.html">
 <script>
-(async function () {
-  const p = new URLSearchParams(location.search);
-  const store = p.get('s');
-  const cid = p.get('c');
-  const raw = p.get('u');
-  const msg = document.getElementById('msg');
-
-  if (!raw) {
-    msg.textContent = 'Lien invalide (URL manquante).';
-    return;
-  }
-
-  let dest;
-  try { dest = decodeURIComponent(raw); } catch (e) { dest = raw; }
-  if (!/^https?:\/\//i.test(dest)) dest = 'https://' + dest;
-
-  const now = new Date().toISOString();
-  const clickInfo = { n: 1, last: now, t: dest };
-
-  try {
-    if (store && cid) {
-      try {
-        const key = 'nonobendo_clicks_' + store;
-        const local = JSON.parse(localStorage.getItem(key) || '{}');
-        const prev = local[cid] || { n: 0 };
-        clickInfo.n = (prev.n || 0) + 1;
-        local[cid] = clickInfo;
-        localStorage.setItem(key, JSON.stringify(local));
-      } catch (e) {}
-
-      // Store distant compatible GitHub Pages (ntfy.sh, CORS ouvert)
-      if (String(store).indexOf('nb-') === 0) {
-        const body = JSON.stringify({ c: String(cid), n: clickInfo.n, last: now, t: dest });
-        try {
-          await Promise.race([
-            fetch('https://ntfy.sh/' + encodeURIComponent(store), {
-              method: 'POST',
-              headers: { Title: 'nonobendo-click', 'Content-Type': 'text/plain' },
-              body: body
-            }),
-            new Promise(function (r) { setTimeout(r, 2200); })
-          ]);
-        } catch (e) {}
-      }
-    }
-  } catch (e) {}
-
-  location.replace(dest);
+(function () {
+  var q = location.search || '';
+  var h = location.hash || '';
+  location.replace('l.html' + q + h);
 })();
 </script>
-</body>
+</head>
+<body></body>
 </html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title></title>
+<style>
+  html, body { margin: 0; background: #fff; min-height: 100%; }
+</style>
+</head>
+<body>
+<script>
+(async function () {
+  function fromB64(s) {
+    s = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    try { return decodeURIComponent(escape(atob(s))); } catch (e) { return ''; }
+  }
+
+  var raw = (location.hash || '').replace(/^#/, '');
+  if (!raw) {
+    document.body.textContent = 'Lien invalide.';
+    return;
+  }
+
+  var store = '', cid = '', dest = '';
+  try {
+    var parsed = JSON.parse(fromB64(raw));
+    if (Array.isArray(parsed)) {
+      store = parsed[0] || '';
+      cid = String(parsed[1] || '');
+      dest = parsed[2] || '';
+    } else if (parsed && typeof parsed === 'object') {
+      store = parsed.s || '';
+      cid = String(parsed.c || '');
+      dest = parsed.u || '';
+    }
+  } catch (e) {}
+
+  // Ancien format track.html?s=&c=&u=
+  if (!dest) {
+    var q = new URLSearchParams(location.search);
+    store = store || q.get('s') || '';
+    cid = cid || q.get('c') || '';
+    dest = q.get('u') || '';
+    try { dest = decodeURIComponent(dest); } catch (e2) {}
+  }
+
+  if (!dest) {
+    document.body.textContent = 'Lien invalide.';
+    return;
+  }
+  if (!/^https?:\/\//i.test(dest)) dest = 'https://' + dest;
+
+  var now = new Date().toISOString();
+  try {
+    if (store && cid) {
+      try {
+        var key = 'nonobendo_clicks_' + store;
+        var local = JSON.parse(localStorage.getItem(key) || '{}');
+        var prev = local[cid] || { n: 0 };
+        local[cid] = { n: (prev.n || 0) + 1, last: now, t: dest };
+        localStorage.setItem(key, JSON.stringify(local));
+      } catch (e3) {}
+
+      if (String(store).indexOf('nb-') === 0) {
+        try {
+          await Promise.race([
+            fetch('https://ntfy.sh/' + encodeURIComponent(store), {
+              method: 'POST',
+              headers: { Title: 'c', 'Content-Type': 'text/plain' },
+              body: JSON.stringify({ c: String(cid), last: now })
+            }),
+            new Promise(function (r) { setTimeout(r, 1800); })
+          ]);
+        } catch (e4) {}
+      }
+    }
+  } catch (e5) {}
+
+  location.replace(dest);
+})();
+</script>
+</body>
+</html>

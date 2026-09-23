@@ -973,28 +973,56 @@ function renderStats() {
 }
 
 function resetAllStats() {
-  if (!confirm('Remettre les stats à zéro ?\n(entreprises gardées, mails / clics / historique effacés)')) return;
-  userData._campaigns = [];
-  if (!userData._meta) userData._meta = {};
-  delete userData._meta.clickCache;
-  delete userData._meta.seenClickMsg;
-  delete userData._meta.clickStoreId;
-  Object.keys(userData).forEach(k => {
-    if (k.startsWith('_')) return;
-    const d = userData[k];
-    if (!d || typeof d !== 'object') return;
-    const notes = d.notes || '';
-    const emailOverride = Object.prototype.hasOwnProperty.call(d, 'emailOverride') ? d.emailOverride : undefined;
-    userData[k] = {
-      postule: false, statut: 'a_contacter', dateContact: '', dateRelance: '', notes,
-      mailStatus: 'none', campaignCount: 0, linkClicked: false, linkClickCount: 0, linkSent: false
+  if (!confirm('Remettre les stats à zéro ?\n(entreprises gardées — envoyé / clics / réponses / historique effacés)')) return;
+
+  const custom = userData._custom || [];
+  const hidden = userData._hidden || [];
+  const meta = {
+    senderEmail: (userData._meta && userData._meta.senderEmail) || '',
+    pagesBase: (userData._meta && userData._meta.pagesBase) || '',
+  };
+
+  // Garde notes + e-mails modifiés, jette tout le reste (y compris anciennes clés orphelines)
+  const keep = {};
+  [...BASE_COMPANIES, ...custom].forEach(c => {
+    if (!c || c._id == null) return;
+    const id = String(c._id);
+    const d = userData[id] || {};
+    keep[id] = {
+      notes: d.notes || '',
+      emailOverride: Object.prototype.hasOwnProperty.call(d, 'emailOverride') ? d.emailOverride : undefined,
     };
-    if (emailOverride !== undefined) userData[k].emailOverride = emailOverride;
   });
+
+  userData = {
+    _meta: meta,
+    _custom: custom,
+    _hidden: hidden,
+    _campaigns: [],
+  };
+
+  Object.keys(keep).forEach(id => {
+    userData[id] = {
+      postule: false,
+      statut: 'a_contacter',
+      dateContact: '',
+      dateRelance: '',
+      notes: keep[id].notes,
+      mailStatus: 'none',
+      campaignCount: 0,
+      linkClicked: false,
+      linkClickCount: 0,
+      linkSent: false,
+    };
+    if (keep[id].emailOverride !== undefined) {
+      userData[id].emailOverride = keep[id].emailOverride;
+    }
+  });
+
   saveData();
   render();
-  if (document.getElementById('statsModal')?.classList.contains('open')) renderCampaignStats();
-  flash('Stats remises à zéro');
+  renderCampaignStats();
+  flash('Stats remises à zéro (envoyé, clics, réponses…)');
 }
 
 // ═══════════════════════════════════════════════
@@ -1647,11 +1675,9 @@ function renderCampaignStats() {
   });
 
   const camps = userData._campaigns || [];
-  const totalCampMails = camps.reduce((a, c) => a + (c.count || 0), 0);
 
   document.getElementById('camp-stats-grid').innerHTML = `
-    <div class="stats-card"><div class="n">${camps.length}</div><div class="l">Envois</div></div>
-    <div class="stats-card"><div class="n" style="color:var(--accent)">${totalCampMails}</div><div class="l">Mails préparés</div></div>
+    <div class="stats-card"><div class="n">${camps.length}</div><div class="l">Campagnes</div></div>
     <div class="stats-card"><div class="n">${withEmail}</div><div class="l">Avec e-mail</div></div>
     <div class="stats-card"><div class="n" style="color:var(--text3)">${never}</div><div class="l">Pas contactés</div></div>
     <div class="stats-card"><div class="n" style="color:var(--blue)">${sent}</div><div class="l">Envoyés</div></div>

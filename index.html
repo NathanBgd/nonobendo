@@ -1241,7 +1241,7 @@ function ensureClickStore() {
   let id = userData._meta.clickStoreId;
   if (id && String(id).indexOf('nb-') !== 0) id = null;
   if (!id) {
-    id = 'nb-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    id = 'nb-' + Math.random().toString(36).slice(2, 10);
     userData._meta.clickStoreId = id;
     userData._meta.clickCache = userData._meta.clickCache || {};
     userData._meta.seenClickMsg = userData._meta.seenClickMsg || {};
@@ -1255,12 +1255,55 @@ function toB64url(str) {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** Lien court discret : …/l#token (sans track / sans URL visible) */
-function buildQuietLink(storeId, companyId, targetUrl) {
+function shortToken(n) {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let out = '';
+  const arr = new Uint8Array(n || 7);
+  (crypto.getRandomValues ? crypto.getRandomValues(arr) : arr.forEach((_, i) => { arr[i] = Math.random() * 256; }));
+  for (let i = 0; i < arr.length; i++) out += chars[arr[i] % chars.length];
+  return out;
+}
+
+function packCompact(storeId, companyId, dest) {
+  const s = String(storeId).replace(/^nb-/, '');
+  const c = String(companyId).replace(/^custom_/, '*');
+  const u = /^https:\/\//i.test(dest)
+    ? dest.slice(8)
+    : (/^http:\/\//i.test(dest) ? '@' + dest.slice(7) : dest);
+  return toB64url([s, c, u].join('\t'));
+}
+
+async function tryShorten(url) {
+  const endpoints = [
+    'https://is.gd/create.php?format=json&url=',
+    'https://v.gd/create.php?format=json&url=',
+  ];
+  for (const base of endpoints) {
+    try {
+      const res = await Promise.race([
+        fetch(base + encodeURIComponent(url)),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2500))
+      ]);
+      if (!res || !res.ok) continue;
+      const j = await res.json();
+      if (j && j.shorturl && /^https?:\/\//i.test(j.shorturl)) return j.shorturl;
+    } catch (e) {}
+  }
+  return null;
+}
+
+/** Lien court : is.gd/… (pointe vers un lien autonome compact) */
+async function buildQuietLink(storeId, companyId, targetUrl) {
   let dest = (targetUrl || '').trim();
   if (!/^https?:\/\//i.test(dest)) dest = 'https://' + dest;
-  const payload = toB64url(JSON.stringify([storeId, String(companyId), dest]));
-  return getLinkBase() + 'l#' + payload;
+
+  // Lien autonome compact (pas d’expiration) — bien plus court que l’ancien #json
+  const compact = getLinkBase() + 'l?d=' + packCompact(storeId, companyId, dest);
+
+  // Raccourci public type is.gd/Ab12Cd
+  const short = await tryShorten(compact);
+  if (short) return short;
+  return compact;
 }
 
 function injectLinkInBody(body, url) {
@@ -1366,10 +1409,10 @@ async function sendCampaign() {
   let opened = 0;
 
   if (withLink) {
-    // 1 mail / contact → lien unique discret (sinon CCI = même lien pour tous)
+    // 1 mail / contact → lien unique court (sinon CCI = même lien pour tous)
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
-      const quiet = buildQuietLink(storeId, t.id, linkRaw);
+      const quiet = await buildQuietLink(storeId, t.id, linkRaw);
       const body = injectLinkInBody(bodyTpl, quiet);
       const url = buildGmailUrl({ to: t.email, subject, body });
       setTimeout(() => window.open(url, '_blank'), i * 650);

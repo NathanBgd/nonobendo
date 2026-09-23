@@ -121,8 +121,12 @@
   tr.refuse-row { opacity: 0.45; }
 
   /* ─── DELETE BTN ─── */
-  .del-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; padding: 4px; border-radius: 4px; }
-  .del-btn:hover { color: var(--red); background: rgba(239,68,68,0.1); }
+  .del-btn {
+    background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35);
+    color: #f87171; cursor: pointer; font-size: 14px; line-height: 1;
+    padding: 6px 9px; border-radius: 6px; position: relative; z-index: 2;
+  }
+  .del-btn:hover { background: rgba(239,68,68,0.25); color: #fff; }
 
   /* ─── EMPTY STATE ─── */
   .empty { text-align: center; padding: 60px; color: var(--text3); }
@@ -767,6 +771,18 @@ function getCompanyId(c, fallbackIdx) {
   return fallbackIdx;
 }
 
+/** Id sûr dans onclick="..." (évite de casser les guillemets HTML) */
+function qid(id) {
+  return "'" + String(id).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+}
+
+function escAttr(v) {
+  return String(v)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+}
+
 function getEffectiveEmail(c, id) {
   const d = getCompanyData(id);
   if (Object.prototype.hasOwnProperty.call(d, 'emailOverride')) return (d.emailOverride || '').trim();
@@ -860,8 +876,8 @@ function render() {
     const distTxt = c.distanceRef ? `<span style="font-size:11px;color:var(--text2)">${c.distanceRef}</span>` : '—';
     const ms = d.mailStatus || 'none';
 
-    return `<tr class="${rowClass}" id="row-${id}">
-      <td class="td-check"><input type="checkbox" class="check-postule" ${d.postule ? 'checked' : ''} onchange="toggle('postule',${JSON.stringify(String(id))},this.checked)"></td>
+    return `<tr class="${rowClass}" id="row-${escAttr(id)}">
+      <td class="td-check"><input type="checkbox" class="check-postule" ${d.postule ? 'checked' : ''} onchange="toggle('postule',${qid(id)},this.checked)"></td>
       <td class="td-nom">
         ${siteHref ? `<a href="${siteHref}" target="_blank">${c.nom}</a>` : c.nom}
         ${c.tel ? `<div style="color:var(--text3);font-size:11px;margin-top:2px">${c.tel}</div>` : ''}
@@ -872,22 +888,22 @@ function render() {
       <td class="td-type">${c.type || '—'}</td>
       <td class="td-tel">${siteTxt ? `<a href="${siteHref}" target="_blank" style="color:var(--text3);font-size:11px">${siteTxt}</a>` : '—'}</td>
       <td class="td-email">
-        <input type="email" class="email-input" value="${emailEsc}" placeholder="ajouter@email.com" onchange="setCompanyEmail(${JSON.stringify(String(id))},this.value)" title="Modifier l'e-mail">
+        <input type="email" class="email-input" value="${emailEsc}" placeholder="ajouter@email.com" onchange="setCompanyEmail(${qid(id)},this.value)" title="Modifier l'e-mail">
         <div style="margin-top:4px">
-          <select class="sel-statut" style="font-size:11px;padding:3px 6px" onchange="setMailStatus(${JSON.stringify(String(id))},this.value)" title="Statut campagne mail">
+          <select class="sel-statut" style="font-size:11px;padding:3px 6px" onchange="setMailStatus(${qid(id)},this.value)" title="Statut campagne mail">
             ${Object.entries(MAIL_STATUTS).map(([k,v]) => `<option value="${k}" ${ms===k?'selected':''}>${v.label}</option>`).join('')}
           </select>
         </div>
       </td>
       <td class="td-statut">
-        <select class="sel-statut s-${d.statut}" onchange="toggle('statut',${JSON.stringify(String(id))},this.value);this.className='sel-statut s-'+this.value">
+        <select class="sel-statut s-${d.statut}" onchange="toggle('statut',${qid(id)},this.value);this.className='sel-statut s-'+this.value">
           ${Object.entries(STATUTS).map(([k,v]) => `<option value="${k}" ${d.statut===k?'selected':''}>${v.label}</option>`).join('')}
         </select>
       </td>
-      <td class="td-date"><input type="date" class="date-input" value="${d.dateContact||''}" onchange="toggle('dateContact',${JSON.stringify(String(id))},this.value)" title="Date de premier contact"></td>
-      <td class="td-date"><input type="date" class="date-input" value="${d.dateRelance||''}" onchange="toggle('dateRelance',${JSON.stringify(String(id))},this.value)" title="Date de relance"></td>
-      <td class="td-note"><textarea class="note-input" rows="1" placeholder="Notes…" onchange="toggle('notes',${JSON.stringify(String(id))},this.value)">${d.notes||''}</textarea></td>
-      <td class="td-actions"><button class="del-btn" onclick="deleteCompany(${JSON.stringify(String(id))})" title="Supprimer">✕</button></td>
+      <td class="td-date"><input type="date" class="date-input" value="${d.dateContact||''}" onchange="toggle('dateContact',${qid(id)},this.value)" title="Date de premier contact"></td>
+      <td class="td-date"><input type="date" class="date-input" value="${d.dateRelance||''}" onchange="toggle('dateRelance',${qid(id)},this.value)" title="Date de relance"></td>
+      <td class="td-note"><textarea class="note-input" rows="1" placeholder="Notes…" onchange="toggle('notes',${qid(id)},this.value)">${d.notes||''}</textarea></td>
+      <td class="td-actions"><button type="button" class="del-btn" data-id="${escAttr(id)}" title="Supprimer">✕</button></td>
     </tr>`;
   }).join('');
 
@@ -976,7 +992,6 @@ function deleteCompany(id) {
   const all = getAllCompanies();
   const c = all.find(x => String(getCompanyId(x)) === sid);
   if (!c) { flash('Contact introuvable'); return; }
-  if (!confirm('Supprimer « ' + c.nom + ' » ?')) return;
   if (!userData._hidden) userData._hidden = [];
   if (!userData._hidden.map(String).includes(sid)) userData._hidden.push(sid);
   userData._custom = (userData._custom || []).filter(x => String(x._id) !== sid);
@@ -1290,7 +1305,7 @@ function renderCampaignList() {
     const checked = campaignSelected.has(String(id)) ? 'checked' : '';
     const ms = MAIL_STATUTS[d.mailStatus] || MAIL_STATUTS.none;
     return `<tr>
-      <td><input type="checkbox" ${checked} onchange="toggleCampaignSelect(${JSON.stringify(String(id))},this.checked)"></td>
+      <td><input type="checkbox" ${checked} onchange="toggleCampaignSelect(${qid(id)},this.checked)"></td>
       <td>${c.nom}</td>
       <td>${c.ville}</td>
       <td style="font-size:11px;color:var(--accent)">${email}</td>
@@ -1545,7 +1560,7 @@ function renderCampaignStats() {
   }
 
   document.getElementById('bounce-list').innerHTML = bounceItems.length
-    ? bounceItems.map(b => `<div><span>${b.nom}<br><span style="color:var(--text3)">${b.email}</span></span><button class="btn" style="font-size:11px;padding:4px 8px" onclick="clearOneBounce(${JSON.stringify(String(b.id))})">OK</button></div>`).join('')
+    ? bounceItems.map(b => `<div><span>${b.nom}<br><span style="color:var(--text3)">${b.email}</span></span><button class="btn" type="button" style="font-size:11px;padding:4px 8px" onclick="clearOneBounce(${qid(b.id)})">OK</button></div>`).join('')
     : '<div style="color:var(--text3);padding:8px 0">Aucun.</div>';
 
   document.getElementById('camp-history').innerHTML = camps.length
@@ -1586,6 +1601,15 @@ document.getElementById('campaignModal').addEventListener('click', function(e) {
 });
 document.getElementById('statsModal').addEventListener('click', function(e) {
   if (e.target === this) closeStatsModal();
+});
+
+document.getElementById('tbody').addEventListener('click', function(e) {
+  const btn = e.target.closest('.del-btn');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const id = btn.getAttribute('data-id');
+  if (id) deleteCompany(id);
 });
 
 loadData();

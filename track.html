@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redirection…</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  p { color: #94a3b8; }
+</style>
+</head>
+<body>
+<p id="msg">Enregistrement du clic, redirection…</p>
+<script>
+(async function () {
+  const p = new URLSearchParams(location.search);
+  const store = p.get('s');
+  const cid = p.get('c');
+  const raw = p.get('u');
+  const msg = document.getElementById('msg');
+
+  if (!raw) {
+    msg.textContent = 'Lien invalide (URL manquante).';
+    return;
+  }
+
+  let dest;
+  try { dest = decodeURIComponent(raw); } catch (e) { dest = raw; }
+  if (!/^https?:\/\//i.test(dest)) dest = 'https://' + dest;
+
+  try {
+    if (store && cid) {
+      const api = 'https://jsonblob.com/api/jsonBlob/' + encodeURIComponent(store);
+      let data = { clicks: {} };
+      try {
+        const res = await fetch(api, { headers: { Accept: 'application/json' } });
+        if (res.ok) data = await res.json();
+      } catch (e) {}
+      if (!data || typeof data !== 'object') data = { clicks: {} };
+      if (!data.clicks) data.clicks = {};
+      const prev = data.clicks[cid] || { n: 0 };
+      data.clicks[cid] = {
+        n: (prev.n || 0) + 1,
+        last: new Date().toISOString(),
+        t: dest
+      };
+      try {
+        await fetch(api, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(data)
+        });
+      } catch (e) {}
+      try {
+        const key = 'nonobendo_clicks_' + store;
+        const local = JSON.parse(localStorage.getItem(key) || '{}');
+        local[cid] = data.clicks[cid];
+        localStorage.setItem(key, JSON.stringify(local));
+      } catch (e) {}
+    }
+  } catch (e) {}
+
+  location.replace(dest);
+})();
+</script>
+</body>
+</html>

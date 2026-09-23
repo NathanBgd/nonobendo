@@ -154,6 +154,7 @@
   .mail-badge.read { background: #3a2e1e; color: #fbbf24; }
   .mail-badge.replied { background: #1e3a2e; color: #34d399; }
   .mail-badge.bounce { background: #3a1e1e; color: #f87171; }
+  .mail-badge.clicked { background: #1e2a4a; color: #93c5fd; }
 
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
   .stats-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
@@ -317,7 +318,7 @@
         <tbody id="camp-tbody"></tbody>
       </table>
     </div>
-    <p class="campaign-hint">Seules les entreprises avec un vrai e-mail (pas « aller en magasin ») apparaissent. L’envoi ouvre ton client mail (Thunderbird, Gmail, Outlook…) avec les destinataires en <strong>CCI</strong> pour masquer les adresses entre elles.</p>
+    <p class="campaign-hint">Seules les entreprises avec un vrai e-mail apparaissent. Sans lien tracké → envoi en <strong>CCI</strong>. Avec lien tracké → <strong>1 mail par entreprise</strong> (lien unique) pour savoir qui a cliqué. Place <code>{{LIEN}}</code> dans le message, ou le lien est ajouté à la fin. La page <code>track.html</code> doit être en ligne sur GitHub Pages.</p>
     <div class="form-row" style="margin-top:14px">
       <div class="form-group" style="flex:2">
         <label>Objet</label>
@@ -325,12 +326,23 @@
       </div>
     </div>
     <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Lien à tracker (CV, portfolio, LinkedIn…)</label>
+        <input type="url" id="camp-link" placeholder="https://ton-portfolio.fr/cv.pdf">
+      </div>
+      <div class="form-group">
+        <label>Base GitHub Pages (si besoin)</label>
+        <input type="url" id="camp-pages-base" placeholder="https://nathanbgd.github.io/nonobendo/" onchange="savePagesBase()">
+      </div>
+    </div>
+    <div class="form-row">
       <div class="form-group">
         <label>Message</label>
-        <textarea id="camp-body" rows="7" placeholder="Bonjour,&#10;&#10;Je me permets de vous contacter…"></textarea>
+        <textarea id="camp-body" rows="7" placeholder="Bonjour,&#10;&#10;Je me permets de vous contacter…&#10;&#10;Mon CV : {{LIEN}}"></textarea>
       </div>
     </div>
     <div class="opt-row">
+      <label><input type="checkbox" id="camp-track-link" checked> Tracker les clics sur le lien</label>
       <label><input type="checkbox" id="camp-read-receipt"> Demander un accusé de lecture (ajoute une mention dans le mail)</label>
       <label><input type="checkbox" id="camp-mark-relance" checked> Mettre à jour « Date relance » + statut Relancé</label>
     </div>
@@ -346,6 +358,14 @@
   <div class="modal modal-lg">
     <h2>Stats campagnes mail</h2>
     <div class="stats-grid" id="camp-stats-grid"></div>
+    <div class="bounce-box" style="background:rgba(108,142,255,.08);border-color:rgba(108,142,255,.35)">
+      <strong style="color:var(--accent)">Clics sur liens</strong><br>
+      Chaque destinataire reçoit un lien unique via <code>track.html</code>. Quand il clique, le clic est enregistré. Clique « Synchroniser les clics » pour mettre à jour le tableau (lu / lien cliqué).
+      <div class="bounce-list" id="click-list"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" type="button" onclick="syncLinkClicksUI()">Synchroniser les clics</button>
+      </div>
+    </div>
     <div class="bounce-box">
       <strong>Qu’est-ce qu’un bounce ?</strong><br>
       Un bounce (rebond) signifie que le serveur a rejeté l’e-mail : adresse invalide, boîte pleine, domaine inexistant, ou filtre anti-spam. Ce n’est pas un refus de candidature — l’adresse ne fonctionne simplement pas. Marque une entreprise en bounce si tu reçois un message d’erreur automatique, puis utilise « Clear bounce » pour retirer ces e-mails de la liste.
@@ -655,6 +675,7 @@ const STATUTS = {
 const MAIL_STATUTS = {
   none:    { label: '—', color: 'none' },
   sent:    { label: 'Envoyé', color: 'sent' },
+  clicked: { label: 'Lien cliqué', color: 'clicked' },
   read:    { label: 'Lu', color: 'read' },
   replied: { label: 'Répondu', color: 'replied' },
   bounce:  { label: 'Bounce', color: 'bounce' },
@@ -691,12 +712,15 @@ function getCompanyData(id) {
   if (!userData[id]) {
     userData[id] = {
       postule: false, statut: 'a_contacter', dateContact: '', dateRelance: '', notes: '',
-      mailStatus: 'none', campaignCount: 0
+      mailStatus: 'none', campaignCount: 0, linkClicked: false, linkClickCount: 0, linkSent: false
     };
   }
   const d = userData[id];
   if (d.mailStatus == null) d.mailStatus = 'none';
   if (d.campaignCount == null) d.campaignCount = 0;
+  if (d.linkClicked == null) d.linkClicked = false;
+  if (d.linkClickCount == null) d.linkClickCount = 0;
+  if (d.linkSent == null) d.linkSent = false;
   return d;
 }
 
@@ -855,10 +879,12 @@ function renderStats() {
     if (d.statut === 'entretien') totals.entretien++;
     if (d.statut === 'refuse') totals.refuse++;
     if (d.statut === 'accepte') totals.accepte++;
-    if (['sent','read','replied'].includes(d.mailStatus)) totals.mailSent++;
+    if (['sent','clicked','read','replied'].includes(d.mailStatus)) totals.mailSent++;
     if (d.mailStatus === 'replied') totals.replied++;
     if (d.mailStatus === 'bounce') totals.bounce++;
+    if (d.linkClicked) totals.clicked = (totals.clicked || 0) + 1;
   });
+  if (!totals.clicked) totals.clicked = 0;
   document.getElementById('stats').innerHTML = `
     <div class="stat s-total"><div class="num">${totals.total}</div><div class="lbl">Total</div></div>
     <div class="stat s-postule"><div class="num">${totals.postule}</div><div class="lbl">Postulé</div></div>
@@ -868,6 +894,7 @@ function renderStats() {
     <div class="stat s-accepte"><div class="num">${totals.accepte}</div><div class="lbl">Accepté</div></div>
     <div class="stat s-refuse"><div class="num">${totals.refuse}</div><div class="lbl">Refusé</div></div>
     <div class="stat"><div class="num" style="color:var(--accent)">${totals.mailSent}</div><div class="lbl">Mails envoyés</div></div>
+    <div class="stat"><div class="num" style="color:#93c5fd">${totals.clicked}</div><div class="lbl">Liens cliqués</div></div>
     <div class="stat"><div class="num" style="color:var(--green)">${totals.replied}</div><div class="lbl">Réponses</div></div>
     <div class="stat"><div class="num" style="color:var(--red)">${totals.bounce}</div><div class="lbl">Bounces</div></div>
   `;
@@ -1016,7 +1043,8 @@ function exportExcel() {
     ['Entretien', all.filter((c,i) => getCompanyData(getCompanyId(c,i)).statut === 'entretien').length],
     ['Accepté', all.filter((c,i) => getCompanyData(getCompanyId(c,i)).statut === 'accepte').length],
     ['Refusé', all.filter((c,i) => getCompanyData(getCompanyId(c,i)).statut === 'refuse').length],
-    ['Mails envoyés', all.filter((c,i) => ['sent','read','replied'].includes(getCompanyData(getCompanyId(c,i)).mailStatus)).length],
+    ['Mails envoyés', all.filter((c,i) => ['sent','clicked','read','replied'].includes(getCompanyData(getCompanyId(c,i)).mailStatus)).length],
+    ['Liens cliqués', all.filter((c,i) => getCompanyData(getCompanyId(c,i)).linkClicked).length],
     ['Réponses mail', all.filter((c,i) => getCompanyData(getCompanyId(c,i)).mailStatus === 'replied').length],
     ['Bounces', all.filter((c,i) => getCompanyData(getCompanyId(c,i)).mailStatus === 'bounce').length],
   ];
@@ -1034,12 +1062,18 @@ function setMailStatus(id, status) {
   const d = getCompanyData(id);
   d.mailStatus = status;
   if (status === 'bounce') d.postule = true;
+  if (status === 'clicked') {
+    d.linkClicked = true;
+    if (!d.linkClickCount) d.linkClickCount = 1;
+    if (!d.linkClickedAt) d.linkClickedAt = todayISO();
+  }
   saveData();
   renderStats();
 }
 
 function openCampaignModal() {
   document.getElementById('camp-sender').value = userData._meta.senderEmail || '';
+  document.getElementById('camp-pages-base').value = userData._meta.pagesBase || 'https://nathanbgd.github.io/nonobendo/';
   campaignSelected = new Set();
   document.getElementById('campaignModal').classList.add('open');
   renderCampaignList();
@@ -1052,6 +1086,54 @@ function closeCampaignModal() {
 function saveSenderEmail() {
   userData._meta.senderEmail = document.getElementById('camp-sender').value.trim();
   saveData();
+}
+
+function savePagesBase() {
+  userData._meta.pagesBase = document.getElementById('camp-pages-base').value.trim();
+  saveData();
+}
+
+function getTrackBase() {
+  const custom = (document.getElementById('camp-pages-base')?.value || userData._meta.pagesBase || '').trim().replace(/\/?$/, '/');
+  if (custom) return custom;
+  if (location.protocol.startsWith('http') && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    return location.href.replace(/[^/]*$/, '');
+  }
+  return 'https://nathanbgd.github.io/nonobendo/';
+}
+
+async function ensureClickStore() {
+  if (userData._meta.clickStoreId) return userData._meta.clickStoreId;
+  const res = await fetch('https://jsonblob.com/api/jsonBlob', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ clicks: {}, created: Date.now(), app: 'nonobendo' })
+  });
+  const loc = res.headers.get('Location') || res.headers.get('location') || '';
+  let id = loc.split('/').filter(Boolean).pop() || null;
+  if (!id && res.ok) {
+    try {
+      const j = await res.json();
+      id = j.id || j._id || null;
+    } catch (e) {}
+  }
+  if (!id) throw new Error('Création du store de clics impossible (réseau / jsonblob).');
+  userData._meta.clickStoreId = id;
+  saveData();
+  return id;
+}
+
+function buildTrackedUrl(storeId, companyId, targetUrl) {
+  let dest = (targetUrl || '').trim();
+  if (!/^https?:\/\//i.test(dest)) dest = 'https://' + dest;
+  return getTrackBase() + 'track.html?s=' + encodeURIComponent(storeId)
+    + '&c=' + encodeURIComponent(String(companyId))
+    + '&u=' + encodeURIComponent(dest);
+}
+
+function injectLinkInBody(body, trackedUrl) {
+  if (body.includes('{{LIEN}}')) return body.split('{{LIEN}}').join(trackedUrl);
+  return body + '\n\nLien : ' + trackedUrl;
 }
 
 function getCampaignCandidates() {
@@ -1112,16 +1194,17 @@ function selectAllCampaign(on) {
   renderCampaignList();
 }
 
-function sendCampaign() {
+async function sendCampaign() {
   saveSenderEmail();
+  savePagesBase();
   const sender = (userData._meta.senderEmail || '').trim();
   if (!sender || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sender)) {
     alert('Indique ton adresse e-mail valide (celle de ton client mail).');
     return;
   }
   const subject = document.getElementById('camp-subject').value.trim();
-  let body = document.getElementById('camp-body').value.trim();
-  if (!subject || !body) {
+  let bodyTpl = document.getElementById('camp-body').value.trim();
+  if (!subject || !bodyTpl) {
     alert('Objet et message sont requis.');
     return;
   }
@@ -1130,84 +1213,169 @@ function sendCampaign() {
     return;
   }
 
+  const linkRaw = (document.getElementById('camp-link').value || '').trim();
+  const trackOn = document.getElementById('camp-track-link').checked && !!linkRaw;
+  if (document.getElementById('camp-track-link').checked && !linkRaw) {
+    alert('Indique le lien à tracker, ou décoche « Tracker les clics ».');
+    return;
+  }
+
   const all = getAllCompanies();
-  const recipients = [];
-  const ids = [];
+  const targets = [];
   all.forEach((c, i) => {
     const id = getCompanyId(c, i);
     if (!campaignSelected.has(String(id))) return;
     const email = getEffectiveEmail(c, id);
     if (!isUsableEmail(email)) return;
-    recipients.push(email);
-    ids.push(id);
+    targets.push({ id, email, nom: c.nom });
   });
-  if (!recipients.length) {
+  if (!targets.length) {
     alert('Aucun e-mail valide dans la sélection.');
     return;
   }
 
-  if (document.getElementById('camp-read-receipt').checked) {
-    body += '\n\n---\nMerci de confirmer la bonne réception de ce message (accusé de lecture).';
-  }
-  body += `\n\n—\nEnvoyé depuis : ${sender}`;
-
-  // mailto CCI — lot de 40 max pour éviter les limites client
-  const chunkSize = 40;
-  const chunks = [];
-  for (let i = 0; i < recipients.length; i += chunkSize) {
-    chunks.push(recipients.slice(i, i + chunkSize));
-  }
-  const openMailto = (emails) => {
-    const url = `mailto:${encodeURIComponent(sender)}?bcc=${emails.map(encodeURIComponent).join(',')}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(url, '_blank');
-  };
-  openMailto(chunks[0]);
-  for (let i = 1; i < chunks.length; i++) {
-    setTimeout(() => openMailto(chunks[i]), i * 800);
+  let storeId = null;
+  if (trackOn) {
+    try {
+      storeId = await ensureClickStore();
+    } catch (e) {
+      alert('Impossible d’activer le tracking de clics : ' + (e.message || e) + '\nVérifie ta connexion, ou envoie sans tracker.');
+      return;
+    }
   }
 
+  const receipt = document.getElementById('camp-read-receipt').checked;
   const markRelance = document.getElementById('camp-mark-relance').checked;
   const today = todayISO();
-  ids.forEach(id => {
-    const d = getCompanyData(id);
-    d.mailStatus = d.mailStatus === 'bounce' ? 'bounce' : 'sent';
-    d.campaignCount = (d.campaignCount || 0) + 1;
-    d.postule = true;
-    if (markRelance) {
-      d.dateRelance = today;
-      if (!d.dateContact) d.dateContact = today;
-      if (d.statut === 'a_contacter' || d.statut === 'contacte') d.statut = 'relance';
+
+  if (trackOn) {
+    if (!confirm(`${targets.length} mail(s) personnalisé(s) vont s’ouvrir (1 par entreprise, lien unique).\nConfirme dans ton client mail à chaque fois.\nContinuer ?`)) return;
+    for (let i = 0; i < targets.length; i++) {
+      const t = targets[i];
+      const tracked = buildTrackedUrl(storeId, t.id, linkRaw);
+      let body = injectLinkInBody(bodyTpl, tracked);
+      if (receipt) body += '\n\n---\nMerci de confirmer la bonne réception de ce message (accusé de lecture).';
+      body += `\n\n—\nEnvoyé depuis : ${sender}`;
+      const url = `mailto:${encodeURIComponent(t.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      setTimeout(() => { window.location.href = url; }, i * 600);
+      const d = getCompanyData(t.id);
+      d.mailStatus = d.mailStatus === 'bounce' ? 'bounce' : 'sent';
+      d.campaignCount = (d.campaignCount || 0) + 1;
+      d.postule = true;
+      d.linkSent = true;
+      d.linkTarget = linkRaw;
+      if (markRelance) {
+        d.dateRelance = today;
+        if (!d.dateContact) d.dateContact = today;
+        if (d.statut === 'a_contacter' || d.statut === 'contacte') d.statut = 'relance';
+      }
     }
-  });
+  } else {
+    let body = bodyTpl;
+    if (linkRaw) body = injectLinkInBody(body, (/^https?:\/\//i.test(linkRaw) ? linkRaw : 'https://' + linkRaw));
+    if (receipt) body += '\n\n---\nMerci de confirmer la bonne réception de ce message (accusé de lecture).';
+    body += `\n\n—\nEnvoyé depuis : ${sender}`;
+    const recipients = targets.map(t => t.email);
+    const chunkSize = 40;
+    for (let i = 0; i < recipients.length; i += chunkSize) {
+      const emails = recipients.slice(i, i + chunkSize);
+      const url = `mailto:${encodeURIComponent(sender)}?bcc=${emails.map(encodeURIComponent).join(',')}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      setTimeout(() => window.open(url, '_blank'), (i / chunkSize) * 800);
+    }
+    targets.forEach(t => {
+      const d = getCompanyData(t.id);
+      d.mailStatus = d.mailStatus === 'bounce' ? 'bounce' : 'sent';
+      d.campaignCount = (d.campaignCount || 0) + 1;
+      d.postule = true;
+      if (markRelance) {
+        d.dateRelance = today;
+        if (!d.dateContact) d.dateContact = today;
+        if (d.statut === 'a_contacter' || d.statut === 'contacte') d.statut = 'relance';
+      }
+    });
+  }
+
   userData._campaigns.unshift({
     id: 'camp_' + Date.now(),
     date: today,
     subject,
     sender,
-    count: ids.length,
-    ids: ids.map(String),
+    count: targets.length,
+    ids: targets.map(t => String(t.id)),
+    tracked: trackOn,
+    link: linkRaw || '',
+    storeId: storeId || null,
   });
   if (userData._campaigns.length > 50) userData._campaigns.length = 50;
   saveData();
   campaignSelected = new Set();
   closeCampaignModal();
   render();
-  alert(`Campagne préparée : ${ids.length} destinataire(s) en CCI.\nConfirme l’envoi dans ton client mail.\nEnsuite, dans le tableau, passe le statut mail en « Lu » / « Répondu » / « Bounce » selon le retour.`);
+  alert(trackOn
+    ? `Campagne trackée : ${targets.length} mail(s).\nAprès envoi, ouvre « Stats campagnes » → Synchroniser les clics.\n(track.html doit être déployé sur GitHub Pages.)`
+    : `Campagne préparée : ${targets.length} destinataire(s) en CCI.\nConfirme l’envoi dans ton client mail.`);
 }
 
 function openStatsModal() {
-  renderCampaignStats();
   document.getElementById('statsModal').classList.add('open');
+  renderCampaignStats();
+  syncLinkClicks().then(n => {
+    if (n > 0) renderCampaignStats();
+  }).catch(() => {});
 }
 
 function closeStatsModal() {
   document.getElementById('statsModal').classList.remove('open');
 }
 
+async function syncLinkClicks() {
+  const store = userData._meta.clickStoreId;
+  if (!store) return 0;
+  let data = null;
+  try {
+    const res = await fetch('https://jsonblob.com/api/jsonBlob/' + encodeURIComponent(store), {
+      headers: { Accept: 'application/json' }
+    });
+    if (res.ok) data = await res.json();
+  } catch (e) {}
+  if (!data || !data.clicks) {
+    try {
+      const local = JSON.parse(localStorage.getItem('nonobendo_clicks_' + store) || '{}');
+      if (Object.keys(local).length) data = { clicks: local };
+    } catch (e) {}
+  }
+  if (!data || !data.clicks) return 0;
+  let n = 0;
+  Object.entries(data.clicks).forEach(([cid, info]) => {
+    const d = getCompanyData(cid);
+    const count = (info && info.n) || 1;
+    if (!d.linkClicked) n++;
+    d.linkClicked = true;
+    d.linkClickCount = count;
+    d.linkClickedAt = (info && info.last) ? String(info.last).slice(0, 10) : todayISO();
+    if (d.mailStatus === 'sent' || d.mailStatus === 'none') d.mailStatus = 'clicked';
+  });
+  if (n > 0) saveData();
+  return n;
+}
+
+async function syncLinkClicksUI() {
+  try {
+    const n = await syncLinkClicks();
+    renderCampaignStats();
+    render();
+    alert(n > 0 ? `${n} nouveau(x) clic(s) synchronisé(s).` : 'Aucun nouveau clic pour le moment.');
+  } catch (e) {
+    alert('Sync impossible : ' + (e.message || e));
+  }
+}
+
 function renderCampaignStats() {
   const all = getAllCompanies();
   let withEmail = 0, never = 0, sent = 0, read = 0, replied = 0, bounce = 0, unread = 0;
+  let linkSent = 0, linkClicked = 0, linkNotClicked = 0;
   const bounceItems = [];
+  const clickItems = [];
   all.forEach((c, i) => {
     const id = getCompanyId(c, i);
     const email = getEffectiveEmail(c, id);
@@ -1217,13 +1385,24 @@ function renderCampaignStats() {
     const ms = d.mailStatus || 'none';
     if (usable && ms === 'none') never++;
     if (ms === 'sent') { sent++; unread++; }
+    if (ms === 'clicked') sent++;
     if (ms === 'read') { read++; sent++; }
     if (ms === 'replied') { replied++; sent++; }
     if (ms === 'bounce') {
       bounce++;
       bounceItems.push({ id, nom: c.nom, email });
     }
+    if (d.linkSent) {
+      linkSent++;
+      if (d.linkClicked) {
+        linkClicked++;
+        clickItems.push({ nom: c.nom, n: d.linkClickCount || 1, at: d.linkClickedAt || '' });
+      } else {
+        linkNotClicked++;
+      }
+    }
   });
+
   const camps = userData._campaigns || [];
   const totalCampMails = camps.reduce((a, c) => a + (c.count || 0), 0);
 
@@ -1234,17 +1413,24 @@ function renderCampaignStats() {
     <div class="stats-card"><div class="n" style="color:var(--text3)">${never}</div><div class="l">Jamais contactés</div></div>
     <div class="stats-card"><div class="n" style="color:var(--blue)">${sent}</div><div class="l">Envoyés</div></div>
     <div class="stats-card"><div class="n" style="color:var(--yellow)">${unread}</div><div class="l">Non lus (envoyés)</div></div>
+    <div class="stats-card"><div class="n" style="color:#93c5fd">${linkSent}</div><div class="l">Liens envoyés</div></div>
+    <div class="stats-card"><div class="n" style="color:var(--accent)">${linkClicked}</div><div class="l">Liens cliqués</div></div>
+    <div class="stats-card"><div class="n" style="color:var(--text3)">${linkNotClicked}</div><div class="l">Liens non cliqués</div></div>
     <div class="stats-card"><div class="n" style="color:var(--orange)">${read}</div><div class="l">Lus</div></div>
     <div class="stats-card"><div class="n" style="color:var(--green)">${replied}</div><div class="l">Réponses</div></div>
     <div class="stats-card"><div class="n" style="color:var(--red)">${bounce}</div><div class="l">Bounces</div></div>
   `;
+
+  document.getElementById('click-list').innerHTML = clickItems.length
+    ? clickItems.map(b => `<div><span>${b.nom}</span><span style="color:var(--accent)">${b.n} clic(s)${b.at ? ' · ' + b.at : ''}</span></div>`).join('')
+    : '<div style="color:var(--text3);padding:8px 0">Aucun clic synchronisé pour le moment.</div>';
 
   document.getElementById('bounce-list').innerHTML = bounceItems.length
     ? bounceItems.map(b => `<div><span>${b.nom}<br><span style="color:var(--text3)">${b.email}</span></span><button class="btn" style="font-size:11px;padding:4px 8px" onclick="clearOneBounce(${JSON.stringify(String(b.id))})">Clear</button></div>`).join('')
     : '<div style="color:var(--text3);padding:8px 0">Aucun bounce pour le moment.</div>';
 
   document.getElementById('camp-history').innerHTML = camps.length
-    ? camps.map(c => `<div><strong style="color:var(--text)">${c.date}</strong> — ${c.subject || '(sans objet)'} · <span style="color:var(--accent)">${c.count}</span> destinataire(s) · ${c.sender || ''}</div>`).join('')
+    ? camps.map(c => `<div><strong style="color:var(--text)">${c.date}</strong> — ${c.subject || '(sans objet)'} · <span style="color:var(--accent)">${c.count}</span> destinataire(s)${c.tracked ? ' · <span style="color:#93c5fd">tracké</span>' : ''} · ${c.sender || ''}</div>`).join('')
     : '<div style="color:var(--text3)">Aucune campagne encore.</div>';
 }
 
@@ -1288,6 +1474,7 @@ document.getElementById('statsModal').addEventListener('click', function(e) {
 // ═══════════════════════════════════════════════
 loadData();
 render();
+syncLinkClicks().then(n => { if (n > 0) render(); }).catch(() => {});
 </script>
 </body>
 </html>

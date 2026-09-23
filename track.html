@@ -28,35 +28,34 @@
   try { dest = decodeURIComponent(raw); } catch (e) { dest = raw; }
   if (!/^https?:\/\//i.test(dest)) dest = 'https://' + dest;
 
+  const now = new Date().toISOString();
+  const clickInfo = { n: 1, last: now, t: dest };
+
   try {
     if (store && cid) {
-      const api = 'https://jsonblob.com/api/jsonBlob/' + encodeURIComponent(store);
-      let data = { clicks: {} };
-      try {
-        const res = await fetch(api, { headers: { Accept: 'application/json' } });
-        if (res.ok) data = await res.json();
-      } catch (e) {}
-      if (!data || typeof data !== 'object') data = { clicks: {} };
-      if (!data.clicks) data.clicks = {};
-      const prev = data.clicks[cid] || { n: 0 };
-      data.clicks[cid] = {
-        n: (prev.n || 0) + 1,
-        last: new Date().toISOString(),
-        t: dest
-      };
-      try {
-        await fetch(api, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify(data)
-        });
-      } catch (e) {}
       try {
         const key = 'nonobendo_clicks_' + store;
         const local = JSON.parse(localStorage.getItem(key) || '{}');
-        local[cid] = data.clicks[cid];
+        const prev = local[cid] || { n: 0 };
+        clickInfo.n = (prev.n || 0) + 1;
+        local[cid] = clickInfo;
         localStorage.setItem(key, JSON.stringify(local));
       } catch (e) {}
+
+      // Store distant compatible GitHub Pages (ntfy.sh, CORS ouvert)
+      if (String(store).indexOf('nb-') === 0) {
+        const body = JSON.stringify({ c: String(cid), n: clickInfo.n, last: now, t: dest });
+        try {
+          await Promise.race([
+            fetch('https://ntfy.sh/' + encodeURIComponent(store), {
+              method: 'POST',
+              headers: { Title: 'nonobendo-click', 'Content-Type': 'text/plain' },
+              body: body
+            }),
+            new Promise(function (r) { setTimeout(r, 2200); })
+          ]);
+        } catch (e) {}
+      }
     }
   } catch (e) {}
 

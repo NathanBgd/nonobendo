@@ -248,10 +248,11 @@
     <option value="decorateur">Décorateur / Designer</option>
     <option value="agenceur">Agenceur / Cuisiniste</option>
     <option value="bureau">Bureau d'études</option>
-    <option value="moe">Maître d'œuvre</option>
-    <option value="scenographie">Scénographie</option>
-  </select>
-  <select id="fPostule" onchange="render()">
+        <option value="moe">Maître d'œuvre</option>
+        <option value="scenographie">Scénographie</option>
+        <option value="manuel">Contact manuel</option>
+      </select>
+      <select id="fPostule" onchange="render()">
     <option value="">Postulé & non postulé</option>
     <option value="oui">Postulé ✓</option>
     <option value="non">Pas encore postulé</option>
@@ -323,6 +324,7 @@
         <option value="Angoulême">Angoulême</option>
         <option value="Contact manuel">Contact manuel</option>
       </select>
+      <select id="camp-type" onchange="renderCampaignList()">
         <option value="">Tous les métiers</option>
         <option value="architecture">Cabinet d'architecture</option>
         <option value="interieur">Architecte d'intérieur</option>
@@ -331,6 +333,7 @@
         <option value="bureau">Bureau d'études</option>
         <option value="moe">Maître d'œuvre</option>
         <option value="scenographie">Scénographie</option>
+        <option value="manuel">Contact manuel</option>
       </select>
       <select id="camp-mailfilter" onchange="renderCampaignList()">
         <option value="">Tous (avec e-mail)</option>
@@ -356,7 +359,7 @@
         <tbody id="camp-tbody"></tbody>
       </table>
     </div>
-    <p class="campaign-hint">Seules les entreprises avec un vrai e-mail apparaissent. Sans lien tracké → envoi en <strong>CCI</strong>. Avec lien tracké → <strong>1 mail par entreprise</strong> (lien unique) pour savoir qui a cliqué. Place <code>{{LIEN}}</code> dans le message, ou le lien est ajouté à la fin. La page <code>track.html</code> doit être en ligne sur GitHub Pages.</p>
+    <p class="campaign-hint">Seules les entreprises avec un vrai e-mail apparaissent. Sans lien tracké → envoi en <strong>CCI</strong>. Avec lien tracké → <strong>1 mail par entreprise</strong> (lien unique via <code>track.html</code> sur GitHub Pages). Place <code>{{LIEN}}</code> dans le message, ou le lien est ajouté à la fin. Les clics sont synchronisés dans « Stats campagnes » (pense à sync sous 12&nbsp;h après un clic).</p>
     <div class="form-row" style="margin-top:14px">
       <div class="form-group" style="flex:2">
         <label>Objet</label>
@@ -732,10 +735,14 @@ const TYPE_MAP = {
   bureau:       ["bureau d'études", "bureau d\u2019études", "ingénierie", "ingenierie", "thermiques", "bet"],
   moe:          ["maître d'oeuvre", "maitre d'oeuvre", "coordination", "cotrabat"],
   scenographie: ["scénographe", "scenographe", "scénographie", "scenographie", "événementiel"],
+  manuel:       ["contact manuel", "contact"],
 };
 
 function matchesType(company, filterType) {
   if (!filterType) return true;
+  if (filterType === 'manuel') {
+    return company.zone === 'Contact manuel' || /contact manuel/i.test(company.type || '');
+  }
   const txt = (company.type || '').toLowerCase();
   const kws = TYPE_MAP[filterType] || [];
   return kws.some(k => txt.includes(k));
@@ -1014,6 +1021,7 @@ function addCompany() {
   if (!nom || !ville) { alert('Nom et ville sont requis.'); return; }
   if (email && !isUsableEmail(email)) { alert('E-mail invalide.'); return; }
   const id = 'custom_' + Date.now();
+  const zone = document.getElementById('m-zone').value || 'Contact manuel';
   const company = {
     _id: id,
     nom,
@@ -1024,7 +1032,7 @@ function addCompany() {
     site: document.getElementById('m-site').value.trim(),
     email,
     type: document.getElementById('m-type').value.trim() || 'Contact',
-    zone: document.getElementById('m-zone').value,
+    zone,
     distanceRef: '',
   };
   if (!userData._custom) userData._custom = [];
@@ -1036,7 +1044,13 @@ function addCompany() {
   };
   saveData();
   closeAddModal();
+  document.getElementById('fZone').value = zone;
+  document.getElementById('fType').value = '';
+  document.getElementById('fStatut').value = '';
+  document.getElementById('fPostule').value = '';
+  document.getElementById('search').value = nom;
   render();
+  alert('Entreprise ajoutée : ' + nom + (email ? ' <' + email + '>' : ''));
 }
 
 function setCompanyEmail(id, value) {
@@ -1078,8 +1092,23 @@ function addQuickContact() {
   saveData();
   document.getElementById('quick-nom').value = '';
   document.getElementById('quick-email').value = '';
+  // Afficher clairement le contact (filtres campagne + tableau principal)
+  const campZone = document.getElementById('camp-zone');
+  const campType = document.getElementById('camp-type');
+  const campSearch = document.getElementById('camp-search');
+  const campMail = document.getElementById('camp-mailfilter');
+  if (campZone) campZone.value = 'Contact manuel';
+  if (campType) campType.value = '';
+  if (campSearch) campSearch.value = '';
+  if (campMail) campMail.value = '';
+  document.getElementById('fZone').value = 'Contact manuel';
+  document.getElementById('fType').value = '';
+  document.getElementById('fStatut').value = '';
+  document.getElementById('fPostule').value = '';
+  document.getElementById('search').value = '';
   renderCampaignList();
   render();
+  alert('Contact ajouté : ' + nom + ' <' + email + '>\nIl apparaît dans « Contact manuel » (campagne + tableau).');
 }
 
 // ─── EXPORT EXCEL ───
@@ -1198,24 +1227,17 @@ function getTrackBase() {
   return 'https://nathanbgd.github.io/nonobendo/';
 }
 
-async function ensureClickStore() {
-  if (userData._meta.clickStoreId) return userData._meta.clickStoreId;
-  const res = await fetch('https://jsonblob.com/api/jsonBlob', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ clicks: {}, created: Date.now(), app: 'nonobendo' })
-  });
-  const loc = res.headers.get('Location') || res.headers.get('location') || '';
-  let id = loc.split('/').filter(Boolean).pop() || null;
-  if (!id && res.ok) {
-    try {
-      const j = await res.json();
-      id = j.id || j._id || null;
-    } catch (e) {}
+function ensureClickStore() {
+  let id = userData._meta.clickStoreId;
+  // Anciens IDs jsonblob (bloqués depuis GitHub Pages) → nouveau canal ntfy
+  if (id && String(id).indexOf('nb-') !== 0) id = null;
+  if (!id) {
+    id = 'nb-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    userData._meta.clickStoreId = id;
+    if (!userData._meta.clickCache) userData._meta.clickCache = {};
+    if (!userData._meta.seenClickMsg) userData._meta.seenClickMsg = {};
+    saveData();
   }
-  if (!id) throw new Error('Création du store de clics impossible (réseau / jsonblob).');
-  userData._meta.clickStoreId = id;
-  saveData();
   return id;
 }
 
@@ -1233,10 +1255,10 @@ function injectLinkInBody(body, trackedUrl) {
 }
 
 function getCampaignCandidates() {
-  const search = (document.getElementById('camp-search').value || '').toLowerCase();
-  const zone = document.getElementById('camp-zone').value;
-  const type = document.getElementById('camp-type').value;
-  const mf = document.getElementById('camp-mailfilter').value;
+  const search = (document.getElementById('camp-search')?.value || '').toLowerCase();
+  const zone = document.getElementById('camp-zone')?.value || '';
+  const type = document.getElementById('camp-type')?.value || '';
+  const mf = document.getElementById('camp-mailfilter')?.value || '';
   const all = getAllCompanies();
   const out = [];
   all.forEach((c, i) => {
@@ -1332,12 +1354,7 @@ async function sendCampaign() {
 
   let storeId = null;
   if (trackOn) {
-    try {
-      storeId = await ensureClickStore();
-    } catch (e) {
-      alert('Impossible d’activer le tracking de clics : ' + (e.message || e) + '\nVérifie ta connexion, ou envoie sans tracker.');
-      return;
-    }
+    storeId = ensureClickStore();
   }
 
   const receipt = document.getElementById('camp-read-receipt').checked;
@@ -1427,22 +1444,62 @@ function closeStatsModal() {
 async function syncLinkClicks() {
   const store = userData._meta.clickStoreId;
   if (!store) return 0;
-  let data = null;
+  if (!userData._meta.clickCache) userData._meta.clickCache = {};
+  if (!userData._meta.seenClickMsg) userData._meta.seenClickMsg = {};
+  const clicks = userData._meta.clickCache;
+
   try {
-    const res = await fetch('https://jsonblob.com/api/jsonBlob/' + encodeURIComponent(store), {
-      headers: { Accept: 'application/json' }
+    const local = JSON.parse(localStorage.getItem('nonobendo_clicks_' + store) || '{}');
+    Object.entries(local).forEach(([cid, info]) => {
+      const prev = clicks[cid] || { n: 0 };
+      const count = Math.max(prev.n || 0, (info && info.n) || 1);
+      clicks[cid] = {
+        n: count,
+        last: (info && info.last) || prev.last || new Date().toISOString()
+      };
     });
-    if (res.ok) data = await res.json();
   } catch (e) {}
-  if (!data || !data.clicks) {
+
+  if (String(store).indexOf('nb-') === 0) {
     try {
-      const local = JSON.parse(localStorage.getItem('nonobendo_clicks_' + store) || '{}');
-      if (Object.keys(local).length) data = { clicks: local };
+      const res = await fetch('https://ntfy.sh/' + encodeURIComponent(store) + '/json?poll=1&since=all');
+      if (res.ok) {
+        const text = await res.text();
+        text.split('\n').forEach(line => {
+          if (!line.trim()) return;
+          let msg;
+          try { msg = JSON.parse(line); } catch (e) { return; }
+          if (!msg || msg.event !== 'message' || !msg.id) return;
+          if (userData._meta.seenClickMsg[msg.id]) return;
+          userData._meta.seenClickMsg[msg.id] = 1;
+          let info = null;
+          try { info = JSON.parse(msg.message); } catch (e) {
+            const parts = String(msg.message || '').split('|');
+            if (parts[0] === 'click' && parts[1]) info = { c: parts[1], last: parts[2] };
+          }
+          if (!info || !info.c) return;
+          const cid = String(info.c);
+          const prev = clicks[cid] || { n: 0 };
+          const incoming = Number(info.n) || 0;
+          const nextN = incoming > 0 ? Math.max(prev.n || 0, incoming) : (prev.n || 0) + 1;
+          clicks[cid] = {
+            n: nextN,
+            last: info.last || (msg.time ? new Date(msg.time * 1000).toISOString() : new Date().toISOString())
+          };
+        });
+      }
     } catch (e) {}
   }
-  if (!data || !data.clicks) return 0;
+
+  const seenKeys = Object.keys(userData._meta.seenClickMsg);
+  if (seenKeys.length > 400) {
+    const keep = {};
+    seenKeys.slice(-300).forEach(k => { keep[k] = 1; });
+    userData._meta.seenClickMsg = keep;
+  }
+
   let n = 0;
-  Object.entries(data.clicks).forEach(([cid, info]) => {
+  Object.entries(clicks).forEach(([cid, info]) => {
     const d = getCompanyData(cid);
     const count = (info && info.n) || 1;
     if (!d.linkClicked) n++;
@@ -1451,7 +1508,7 @@ async function syncLinkClicks() {
     d.linkClickedAt = (info && info.last) ? String(info.last).slice(0, 10) : todayISO();
     if (d.mailStatus === 'sent' || d.mailStatus === 'none') d.mailStatus = 'clicked';
   });
-  if (n > 0) saveData();
+  saveData();
   return n;
 }
 
